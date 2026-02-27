@@ -59,10 +59,34 @@ function App() {
             element={
               user ? (
                 <DashboardLayout user={user} onLogout={handleLogout}>
-                  {user.role === 'project_manager' && <PMDashboardNew user={user} />}
+                  {user.role === 'project_manager' && <MyDeck user={user} />}
                   {user.role === 'account_manager' && <AMDashboard user={user} />}
                   {user.role === 'line_producer' && <LPDashboard user={user} />}
                   {user.role === 'team_member' && <TeamDashboard user={user} />}
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/timelines/:id"
+            element={
+              user ? (
+                <DashboardLayout user={user} onLogout={handleLogout}>
+                  <PMDashboardNew user={user} />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/my-tasks"
+            element={
+              user ? (
+                <DashboardLayout user={user} onLogout={handleLogout}>
+                  <TeamDashboard user={user} />
                 </DashboardLayout>
               ) : (
                 <Navigate to="/login" />
