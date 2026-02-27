@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo } from 'lucide-react';
-import { List, Calendar } from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  LogOut, 
+  Menu, 
+  Briefcase, 
+  ListTodo, 
+  List as ListIcon, 
+  Calendar as CalendarIcon 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
