@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 
 import Login from '@/pages/Login';
 import DashboardLayout from '@/components/DashboardLayout';
-import PMDashboard from '@/pages/PMDashboard';
+import PMDashboardNew from '@/pages/PMDashboardNew';
 import AMDashboard from '@/pages/AMDashboard';
 import LPDashboard from '@/pages/LPDashboard';
 import TeamDashboard from '@/pages/TeamDashboard';
