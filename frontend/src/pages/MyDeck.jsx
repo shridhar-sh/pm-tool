@@ -243,13 +243,22 @@ export default function MyDeck({ user }) {
                 <th className="border border-slate-300 p-2 text-left min-w-[120px]">CS done by</th>
                 <th className="border border-slate-300 p-2 text-center min-w-[80px] bg-red-600">no of ext days</th>
                 <th className="border border-slate-300 p-2 text-left min-w-[150px]">Status</th>
-                {stages.map((stage, idx) => (
-                  <th key={idx} className="border border-slate-300 p-2 min-w-[50px] text-center">
-                    <div className="transform -rotate-45 origin-center whitespace-nowrap text-xs">
-                      {stage}
-                    </div>
-                  </th>
-                ))}
+                {stages.map((stage, idx) => {
+                  const prevDept = idx > 0 ? stages[idx - 1].department : null;
+                  const isNewDept = stage.department !== prevDept;
+                  return (
+                    <th 
+                      key={idx} 
+                      className={`border border-slate-300 p-2 min-w-[50px] text-center ${
+                        isNewDept ? 'border-l-4 border-l-slate-900' : ''
+                      }`}
+                    >
+                      <div className="transform -rotate-45 origin-center whitespace-nowrap text-xs">
+                        {stage.name}
+                      </div>
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
