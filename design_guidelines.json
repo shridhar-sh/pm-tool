@@ -1,0 +1,181 @@
+{
+  "persona": {
+    "identity": "E1: The Anti-AI Designer",
+    "mission": "Create a high-performance, visually distinct Project Management Dashboard for an Advertising Agency. Avoid generic SaaS tropes. Prioritize clarity, density, and workflow velocity.",
+    "tone": "Professional, Organized, Creative, Efficient",
+    "theme_preference": "Light Mode (Strict)"
+  },
+  "design_system": {
+    "typography": {
+      "headings": {
+        "family": "Manrope, sans-serif",
+        "weights": ["600", "800"],
+        "tracking": "-0.02em",
+        "usage": "Use for all page titles, section headers, and widget titles."
+      },
+      "body": {
+        "family": "Inter, sans-serif",
+        "weights": ["400", "500"],
+        "usage": "Standard text, descriptions, table data."
+      },
+      "monospace": {
+        "family": "JetBrains Mono, monospace",
+        "usage": "Project IDs, Dates, Status Codes."
+      }
+    },
+    "colors": {
+      "palette": {
+        "primary": {
+          "name": "Obsidian Slate",
+          "value": "#0F172A",
+          "usage": "Primary buttons, active states, main navigation."
+        },
+        "background": {
+          "canvas": "#F8FAFC",
+          "surface": "#FFFFFF",
+          "sidebar": "#FFFFFF"
+        },
+        "accents": {
+          "client_facing": "#7C3AED", 
+          "internal_production": "#F59E0B",
+          "success": "#10B981",
+          "alert": "#EF4444"
+        },
+        "text": {
+          "primary": "#0F172A",
+          "secondary": "#64748B",
+          "tertiary": "#94A3B8"
+        },
+        "border": {
+          "default": "#E2E8F0",
+          "active": "#94A3B8"
+        }
+      },
+      "rules": "Avoid gradients. Use solid, high-contrast colors. Use text-slate-500 for metadata."
+    },
+    "spacing": {
+      "base_scale": "4px",
+      "container_padding": "p-6 md:p-8",
+      "section_gap": "gap-6",
+      "component_gap": "gap-4"
+    },
+    "visual_enhancers": {
+      "radius": "rounded-md",
+      "shadows": "shadow-sm",
+      "borders": "border border-slate-200",
+      "glassmorphism": "Only for sticky headers: bg-white/80 backdrop-blur-md border-b border-slate-200"
+    }
+  },
+  "layout_strategy": {
+    "dashboard_grid": {
+      "type": "Bento Grid (Mode B)",
+      "columns": "grid-cols-1 md:grid-cols-12",
+      "gap": "gap-6",
+      "rules": "Sidebar is fixed width (260px). Main content area fills remaining space. Widgets snap to grid."
+    },
+    "navigation": {
+      "type": "Vertical Sidebar",
+      "location": "Left",
+      "style": "Fixed, full height, border-r border-slate-200, bg-white"
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "bg-white border border-slate-200 rounded-lg shadow-sm hover:border-slate-300 transition-colors duration-200",
+      "content_padding": "p-5"
+    },
+    "buttons": {
+      "primary": "bg-slate-900 text-white hover:bg-slate-800 rounded-md px-4 py-2 font-medium shadow-sm transition-all",
+      "secondary": "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 rounded-md px-4 py-2 font-medium transition-all",
+      "ghost": "text-slate-600 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-1.5 transition-all"
+    },
+    "badges": {
+      "style": "rounded-full px-2.5 py-0.5 text-xs font-semibold",
+      "variants": {
+        "neutral": "bg-slate-100 text-slate-700",
+        "brand": "bg-violet-50 text-violet-700 border border-violet-100",
+        "warning": "bg-amber-50 text-amber-700 border border-amber-100"
+      }
+    },
+    "tables": {
+      "style": "w-full text-sm text-left",
+      "header": "text-xs text-slate-500 uppercase bg-slate-50 font-semibold tracking-wider",
+      "row": "border-b border-slate-100 hover:bg-slate-50 transition-colors"
+    }
+  },
+  "assets": {
+    "avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1731848358154-52ebc3c4d590?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGNyZWF0aXZlJTIwYWdlbmN5JTIwZGl2ZXJzZSUyMHRlYW18ZW58MHx8fHwxNzcyMTY1MzkyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Team Member - Strategist",
+        "category": "people"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1622676614630-a9109126264a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGNyZWF0aXZlJTIwYWdlbmN5JTIwZGl2ZXJzZSUyMHRlYW18ZW58MHx8fHwxNzcyMTY1MzkyfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Team Meeting / Group",
+        "category": "people"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1758613655736-16757bdd953b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwzfHxoaWdoJTIwZW5kJTIwYWR2ZXJ0aXNpbmclMjBwaG90b2dyYXBoeSUyMGZhc2hpb24lMjB0ZWNoJTIwZm9vZHxlbnwwfHx8fDE3NzIxNjUzOTN8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Photographer / Line Producer Context",
+        "category": "people"
+      }
+    ],
+    "project_thumbnails": [
+      {
+        "url": "https://images.unsplash.com/photo-1713425886063-4a49da507ada?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1MDV8MHwxfHNlYXJjaHwyfHxoaWdoJTIwZW5kJTIwYWR2ZXJ0aXNpbmclMjBwaG90b2dyYXBoeSUyMGZhc2hpb24lMjB0ZWNoJTIwZm9vZHxlbnwwfHx8fDE3NzIxNjUzOTN8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Fashion Campaign Thumbnail",
+        "category": "project"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1741720928049-2d167982b981?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzOTB8MHwxfHNlYXJjaHwzfHxtaW5pbWFsaXN0JTIwcHJvZHVjdCUyMHBob3RvZ3JhcGh5JTIwc2tpbmNhcmUlMjB0ZWNoJTIwaGVhZHBob25lc3xlbnwwfHx8fDE3NzIxNjUzOTh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Tech/Audio Product Thumbnail",
+        "category": "project"
+      },
+      {
+        "url": "https://images.pexels.com/photos/8038334/pexels-photo-8038334.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Headphones / Electronics Campaign",
+        "category": "project"
+      }
+    ]
+  },
+  "page_specifications": {
+    "dashboard_pm": {
+      "title": "Agency Overview",
+      "widgets": [
+        "Project Health Summary (KPI Cards)",
+        "Active Projects Grid (Thumbnail view)",
+        "Resource Allocation Heatmap",
+        "Upcoming Deadlines List"
+      ]
+    },
+    "project_detail": {
+      "title": "Project Workspace",
+      "widgets": [
+        "Project Header (Client, Status, Timeline)",
+        "Workflow Tracker (Stepper: Strategy > Production > Post > Client)",
+        "Task Board (Kanban or List)",
+        "Approval Queue (Critical)"
+      ]
+    }
+  },
+  "instructions_to_main_agent": [
+    "Use 'Manrope' for all headings. Import it from Google Fonts.",
+    "Implement the 'Bento Grid' layout for the dashboard. Use 'grid-cols-12' and 'col-span-x' utility classes.",
+    "Use Shadcn UI components but override the default 'rounded-xl' with 'rounded-md' for a sharper, more professional look.",
+    "For the Timeline/Gantt view, use a simple HTML/CSS grid implementation if a library is not available, or use a list view with progress bars.",
+    "Ensure all interactive elements have hover states that change border color or background lightness.",
+    "The Sidebar must be fixed on the left. On mobile, it should be a Sheet/Drawer.",
+    "Use the provided image URLs for project thumbnails and user avatars to make the mockups feel real.",
+    "DO NOT use gradients for backgrounds. Stick to flat colors (White/Slate-50).",
+    "Add 'data-testid' to all buttons and inputs."
+  ],
+  "universal_guidelines": [
+    "Don't make generic centered layouts.",
+    "Create depth through layered design elements (z-index).",
+    "Use glass-morphism effects only for sticky headers.",
+    "Every interaction needs micro-animations (transition-colors, transform).",
+    "Use 2-3x more spacing than feels comfortable.",
+    "Never use AI assistant Emoji characters."
+  ]
+}
