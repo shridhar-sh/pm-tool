@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 
 import Login from '@/pages/Login';
 import DashboardLayout from '@/components/DashboardLayout';
+import Dashboard from '@/pages/Dashboard';
 import MyDeck from '@/pages/MyDeck';
 import PMDashboardNew from '@/pages/PMDashboardNew';
 import AMDashboard from '@/pages/AMDashboard';
