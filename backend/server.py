@@ -89,25 +89,17 @@ async def root():
 
 def create_default_workflow_stages():
     stages = [
-        {"name": "Onboarding Form", "taskType": "SS"},
         {"name": "Onboarding", "taskType": "SS"},
+        {"name": "Strategy", "taskType": "SS"},
+        {"name": "Strategy Approval", "taskType": "C"},
         {"name": "Products", "taskType": "C"},
-        {"name": "Research", "taskType": "SS"},
-        {"name": "Brainstorm Session", "taskType": "SS"},
-        {"name": "Scripts", "taskType": "SS"},
-        {"name": "Scripts Approval", "taskType": "C"},
-        {"name": "Model brief to LP", "taskType": "SS"},
-        {"name": "Internal KT Production", "taskType": "SS"},
-        {"name": "Storyboarding", "taskType": "SS"},
-        {"name": "Model list to client", "taskType": "C"},
-        {"name": "Model Approval", "taskType": "C"},
+        {"name": "Pre Production", "taskType": "SS"},
         {"name": "PPM", "taskType": "C"},
         {"name": "Shoot", "taskType": "SS"},
-        {"name": "Internal KT Post", "taskType": "SS"},
         {"name": "Edits", "taskType": "SS"},
         {"name": "Feedback", "taskType": "C"},
         {"name": "Revision", "taskType": "SS"},
-        {"name": "Project Closed", "taskType": "C"}
+        {"name": "Final Approval", "taskType": "C"}
     ]
     
     return [
