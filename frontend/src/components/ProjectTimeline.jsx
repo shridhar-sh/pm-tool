@@ -176,18 +176,28 @@ export default function ProjectTimeline({ project, onUpdate }) {
                   </td>
                   <td className="border border-slate-200 p-1">
                     <Input
-                      type="date"
-                      value={stage.endDate || ''}
-                      onChange={(e) => handleStageUpdate(stageIdx, 'endDate', e.target.value)}
+                      type="number"
+                      min="0"
+                      value={stage.duration || ''}
+                      onChange={(e) => handleStageUpdate(stageIdx, 'duration', e.target.value)}
+                      placeholder="Days"
                       className="h-8 text-xs"
-                      data-testid={`stage-${stageIdx}-end-date`}
+                      data-testid={`stage-${stageIdx}-duration`}
                     />
                   </td>
-                  <td className="border border-slate-200 p-2 text-center mono text-xs">
-                    {stage.duration || 0}
+                  <td className="border border-slate-200 p-1">
+                    <Input
+                      type="number"
+                      min="0"
+                      value={stage.extraDays || ''}
+                      onChange={(e) => handleStageUpdate(stageIdx, 'extraDays', e.target.value)}
+                      placeholder="0"
+                      className="h-8 text-xs"
+                      data-testid={`stage-${stageIdx}-extra-days`}
+                    />
                   </td>
-                  <td className="border border-slate-200 p-2 text-center mono text-xs text-red-600">
-                    {stage.extraDays || 0}
+                  <td className="border border-slate-200 p-2 bg-slate-50 mono text-xs text-center">
+                    {stage.endDate || '-'}
                   </td>
                   {dates.map((date, dateIdx) => {
                     const cellColor = getCellColor(stage, date);
