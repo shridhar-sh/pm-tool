@@ -60,7 +60,7 @@ class Project(BaseModel):
     extraDays: int = 0
     assignedAM: Optional[str] = None
     assignedLP: Optional[str] = None
-    pod: Optional[str] = None
+    pod: Optional[str] = "POD 1"
     workflowStages: List[Dict] = []
     createdBy: Optional[str] = None
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
