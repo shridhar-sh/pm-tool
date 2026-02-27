@@ -82,9 +82,19 @@ export default function Dashboard({ user }) {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-slate-600 mt-1">Welcome back, {user.name}! Here's your project overview</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Dashboard</h1>
+          <p className="text-slate-600 mt-1">Welcome back, {user.name}! Here's your project overview</p>
+        </div>
+        <Button
+          onClick={() => navigate('/am-tracker')}
+          className="bg-slate-900 hover:bg-slate-800"
+          data-testid="add-project-button"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add New Project
+        </Button>
       </div>
 
       {loading ? (
