@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  LogOut, 
-  Menu, 
-  Briefcase, 
-  ListTodo, 
-  List as ListIcon, 
-  Calendar as CalendarIcon 
-} from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,9 +12,9 @@ function DashboardLayout({ user, onLogout, children }) {
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'AM Tracker', icon: ListIcon, path: '/am-tracker' },
+    { name: 'AM Tracker', icon: LayoutDashboard, path: '/am-tracker' },
     { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
-    { name: 'Project Management', icon: CalendarIcon, path: '/project-management' },
+    { name: 'Project Management', icon: LayoutDashboard, path: '/project-management' },
   ];
 
   const getInitials = (name) => {
