@@ -108,10 +108,37 @@ export default function MyDeck({ user }) {
   });
 
   const stages = [
-    'Onboarding', 'Strategy', 'Strategy Approval', 'Products',
-    'Pre Production', 'PPM', 'Shoot', 'Edits', 'Feedback',
-    'Revision', 'Final Approval'
+    // Strategy Phase
+    { name: 'Onboarding Form', department: 'strategy' },
+    { name: 'Onboarding', department: 'strategy' },
+    { name: 'Products', department: 'strategy' },
+    { name: 'Research', department: 'strategy' },
+    { name: 'Brainstorm Session', department: 'strategy' },
+    // Pre-Production Phase
+    { name: 'Scripts', department: 'pre_production' },
+    { name: 'Scripts Approval', department: 'pre_production' },
+    { name: 'Model brief to LP', department: 'pre_production' },
+    { name: 'Internal KT Production', department: 'pre_production' },
+    { name: 'Storyboarding', department: 'pre_production' },
+    // Production Phase
+    { name: 'Model list to client', department: 'production' },
+    { name: 'Model Approval', department: 'production' },
+    { name: 'PPM', department: 'production' },
+    { name: 'Shoot', department: 'production' },
+    // Post-Production Phase
+    { name: 'Internal KT Post', department: 'post_production' },
+    { name: 'Edits', department: 'post_production' },
+    { name: 'Feedback', department: 'post_production' },
+    { name: 'Revision', department: 'post_production' },
+    { name: 'Project Closed', department: 'post_production' }
   ];
+
+  const departmentLabels = {
+    strategy: 'Strategy',
+    pre_production: 'Pre-Production',
+    production: 'Production',
+    post_production: 'Post-Production'
+  };
 
   return (
     <div className="p-6 md:p-8 space-y-6">
