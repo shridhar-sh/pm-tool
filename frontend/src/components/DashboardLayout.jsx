@@ -128,3 +128,6 @@ function DashboardLayout({ user, onLogout, children }) {
     </div>
   );
 }
+
+
+export default DashboardLayout;
