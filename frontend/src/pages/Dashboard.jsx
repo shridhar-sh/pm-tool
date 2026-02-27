@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TrendingUp, Clock, CheckCircle, AlertCircle, Users, Briefcase } from 'lucide-react';
+import { TrendingUp, Clock, CheckCircle, AlertCircle, Users, Briefcase, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import axios from 'axios';
 import { toast } from 'sonner';
