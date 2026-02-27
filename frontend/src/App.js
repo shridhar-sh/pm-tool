@@ -1,52 +1,88 @@
-import { useEffect } from "react";
-import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { useState, useEffect } from 'react';
+import '@/App.css';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import axios from 'axios';
+import { Toaster } from '@/components/ui/sonner';
+
+import Login from '@/pages/Login';
+import DashboardLayout from '@/components/DashboardLayout';
+import PMDashboard from '@/pages/PMDashboard';
+import AMDashboard from '@/pages/AMDashboard';
+import LPDashboard from '@/pages/LPDashboard';
+import TeamDashboard from '@/pages/TeamDashboard';
+import ProjectDetail from '@/pages/ProjectDetail';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+function App() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    helloWorldApi();
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+  const handleLogin = (userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
 
-function App() {
+  const handleLogout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="text-slate-600">Loading...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          <Route
+            path="/login"
+            element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/"
+            element={
+              user ? (
+                <DashboardLayout user={user} onLogout={handleLogout}>
+                  {user.role === 'project_manager' && <PMDashboard user={user} />}
+                  {user.role === 'account_manager' && <AMDashboard user={user} />}
+                  {user.role === 'line_producer' && <LPDashboard user={user} />}
+                  {user.role === 'team_member' && <TeamDashboard user={user} />}
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
+            path="/project/:id"
+            element={
+              user ? (
+                <DashboardLayout user={user} onLogout={handleLogout}>
+                  <ProjectDetail user={user} />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
         </Routes>
       </BrowserRouter>
+      <Toaster position="top-right" />
     </div>
   );
 }

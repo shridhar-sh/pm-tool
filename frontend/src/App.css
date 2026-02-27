@@ -1,34 +1,51 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+.App {
+  min-height: 100vh;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.sidebar-nav-item {
+  transition: background-color 200ms, color 200ms;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.sidebar-nav-item:hover {
+  background-color: rgb(241 245 249);
+  color: rgb(15 23 42);
 }
 
-.App-link {
-    color: #61dafb;
+.sidebar-nav-item.active {
+  background-color: rgb(15 23 42);
+  color: white;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.project-card {
+  transition: border-color 200ms, transform 100ms;
+}
+
+.project-card:hover {
+  border-color: rgb(148 163 184);
+  transform: translateY(-1px);
+}
+
+.kpi-card {
+  transition: border-color 200ms;
+}
+
+.kpi-card:hover {
+  border-color: rgb(203 213 225);
+}
+
+.btn-primary {
+  transition: background-color 200ms, box-shadow 200ms;
+}
+
+.btn-primary:hover {
+  background-color: rgb(30 41 59);
+}
+
+.btn-secondary {
+  transition: background-color 200ms, color 200ms;
+}
+
+.btn-secondary:hover {
+  background-color: rgb(241 245 249);
+  color: rgb(15 23 42);
 }
