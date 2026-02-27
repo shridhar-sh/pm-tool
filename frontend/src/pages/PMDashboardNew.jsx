@@ -18,6 +18,7 @@ const API = `${BACKEND_URL}/api`;
 
 export default function PMDashboardNew({ user }) {
   const navigate = useNavigate();
+  const { id } = useParams();
   const [projects, setProjects] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [newProjectOpen, setNewProjectOpen] = useState(false);
