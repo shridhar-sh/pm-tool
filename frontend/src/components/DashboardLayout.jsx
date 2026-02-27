@@ -1,6 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import * as Icons from 'lucide-react';
+import { 
+  LayoutDashboard, 
+  LogOut, 
+  Menu, 
+  Briefcase, 
+  ListTodo, 
+  List as ListIcon, 
+  Calendar as CalendarIcon 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -8,13 +16,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 function DashboardLayout({ user, onLogout, children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', icon: 'LayoutDashboard', path: '/' },
-    { name: 'AM Tracker', icon: 'List', path: '/am-tracker' },
-    { name: 'My Tasks', icon: 'ListTodo', path: '/my-tasks' },
-    { name: 'Project Management', icon: 'Calendar', path: '/project-management' },
+    { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { name: 'AM Tracker', icon: ListIcon, path: '/am-tracker' },
+    { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
+    { name: 'Project Management', icon: CalendarIcon, path: '/project-management' },
   ];
 
   const getInitials = (name) => {
@@ -40,7 +48,7 @@ function DashboardLayout({ user, onLogout, children }) {
       <div className="p-6 border-b border-slate-200">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-slate-900 rounded-md flex items-center justify-center">
-            <Icons.Briefcase className="w-5 h-5 text-white" />
+            <Briefcase className="w-5 h-5 text-white" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-slate-900">AgencyPM</h1>
@@ -51,7 +59,7 @@ function DashboardLayout({ user, onLogout, children }) {
 
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => {
-          const IconComponent = Icons[item.icon];
+          const Icon = item.icon;
           const isActive = location.pathname === item.path;
           return (
             <button
@@ -65,7 +73,7 @@ function DashboardLayout({ user, onLogout, children }) {
                 isActive ? 'active' : 'text-slate-600'
               }`}
             >
-              <IconComponent className="w-5 h-5" />
+              <Icon className="w-5 h-5" />
               {item.name}
             </button>
           );
@@ -91,7 +99,7 @@ function DashboardLayout({ user, onLogout, children }) {
           variant="ghost"
           className="w-full justify-start text-slate-600 hover:text-slate-900 hover:bg-slate-100"
         >
-          <Icons.LogOut className="w-4 h-4 mr-2" />
+          <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>
       </div>
@@ -108,14 +116,14 @@ function DashboardLayout({ user, onLogout, children }) {
         <header className="md:hidden bg-white border-b border-slate-200 p-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-slate-900 rounded flex items-center justify-center">
-              <Icons.Briefcase className="w-4 h-4 text-white" />
+              <Briefcase className="w-4 h-4 text-white" />
             </div>
             <h1 className="text-lg font-bold text-slate-900">AgencyPM</h1>
           </div>
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" data-testid="mobile-menu-button">
-                <Icons.Menu className="w-5 h-5" />
+                <Menu className="w-5 h-5" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
@@ -131,5 +139,6 @@ function DashboardLayout({ user, onLogout, children }) {
     </div>
   );
 }
+
 
 export default DashboardLayout;
