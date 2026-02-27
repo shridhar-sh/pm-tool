@@ -72,14 +72,17 @@ export default function ProjectTimeline({ project, onUpdate }) {
     const updatedStages = [...stages];
     updatedStages[stageIndex][field] = value;
     
-    if (field === 'startDate' || field === 'endDate') {
+    // Auto-calculate end date when start date, duration, or extra days change
+    if (field === 'startDate' || field === 'duration' || field === 'extraDays') {
       const start = updatedStages[stageIndex].startDate;
-      const end = updatedStages[stageIndex].endDate;
+      const duration = parseInt(updatedStages[stageIndex].duration) || 0;
+      const extra = parseInt(updatedStages[stageIndex].extraDays) || 0;
       
-      if (start && end) {
+      if (start && (duration > 0 || extra > 0)) {
         const startDate = parseISO(start);
-        const endDate = parseISO(end);
-        updatedStages[stageIndex].duration = differenceInDays(endDate, startDate) + 1;
+        const totalDays = duration + extra;
+        const calculatedEndDate = addDays(startDate, totalDays - 1);
+        updatedStages[stageIndex].endDate = format(calculatedEndDate, 'yyyy-MM-dd');
       }
     }
     
