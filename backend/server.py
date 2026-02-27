@@ -43,7 +43,7 @@ class ProjectCreate(BaseModel):
     statusCategory: str
     assignedAM: Optional[str] = None
     assignedLP: Optional[str] = None
-    pod: Optional[str] = None
+    pod: Optional[str] = "POD 1"
     workflowStages: List[Dict] = []
 
 
