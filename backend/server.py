@@ -6,7 +6,7 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone
 
@@ -22,17 +22,29 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
+class WorkflowStage(BaseModel):
+    name: str
+    taskType: str
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    duration: int = 0
+    extraDays: int = 0
+    completed: bool = False
+    status: str = "not_started"
+
+
 class ProjectCreate(BaseModel):
     name: str
     client: str
-    type: str
-    description: str
-    deadline: str
-    assignedAM: str
-    assignedLP: str
-    teamMembers: List[str] = []
-    createdBy: str
-    status: str
+    sow: str
+    csDoneBy: str
+    projectStartDate: str
+    projectEndDate: str
+    statusCategory: str
+    assignedAM: Optional[str] = None
+    assignedLP: Optional[str] = None
+    pod: Optional[str] = None
+    workflowStages: List[Dict] = []
 
 
 class Project(BaseModel):
@@ -40,90 +52,83 @@ class Project(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     client: str
-    type: str
-    description: str
-    deadline: str
-    assignedAM: str
-    assignedLP: str
-    teamMembers: List[str] = []
-    createdBy: str
-    status: str
+    sow: str
+    csDoneBy: str
+    projectStartDate: str
+    projectEndDate: str
+    statusCategory: str
+    extraDays: int = 0
+    assignedAM: Optional[str] = None
+    assignedLP: Optional[str] = None
+    pod: Optional[str] = None
+    workflowStages: List[Dict] = []
+    createdBy: Optional[str] = None
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class ProjectUpdate(BaseModel):
-    status: Optional[str] = None
+    name: Optional[str] = None
+    statusCategory: Optional[str] = None
+    extraDays: Optional[int] = None
+    workflowStages: Optional[List[Dict]] = None
 
 
-class TaskCreate(BaseModel):
-    title: str
-    description: str
-    assignedTo: str
-    dueDate: str
-    priority: str
-    projectId: str
-    projectName: str
-    createdBy: str
-    completed: bool
-
-
-class Task(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str
-    description: str
-    assignedTo: str
-    dueDate: str
-    priority: str
-    projectId: str
-    projectName: str
-    createdBy: str
-    completed: bool
-    createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-
-class TaskUpdate(BaseModel):
+class StageUpdate(BaseModel):
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    duration: Optional[int] = None
+    extraDays: Optional[int] = None
     completed: Optional[bool] = None
-
-
-class ApprovalCreate(BaseModel):
-    type: str
-    title: str
-    description: str
-    approver: str
-    projectId: str
-    status: str
-    requestedBy: str
-
-
-class Approval(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    type: str
-    title: str
-    description: str
-    approver: str
-    projectId: str
-    status: str
-    requestedBy: str
-    reviewedBy: Optional[str] = None
-    reviewedAt: Optional[str] = None
-    createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-
-class ApprovalUpdate(BaseModel):
     status: Optional[str] = None
-    reviewedBy: Optional[str] = None
-    reviewedAt: Optional[str] = None
 
 
 @api_router.get("/")
 async def root():
-    return {"message": "Agency PM API"}
+    return {"message": "Agency PM API v2"}
+
+
+def create_default_workflow_stages():
+    stages = [
+        {"name": "Onboarding Form", "taskType": "SS"},
+        {"name": "Onboarding", "taskType": "SS"},
+        {"name": "Products", "taskType": "C"},
+        {"name": "Research", "taskType": "SS"},
+        {"name": "Brainstorm Session", "taskType": "SS"},
+        {"name": "Scripts", "taskType": "SS"},
+        {"name": "Scripts Approval", "taskType": "C"},
+        {"name": "Model brief to LP", "taskType": "SS"},
+        {"name": "Internal KT Production", "taskType": "SS"},
+        {"name": "Storyboarding", "taskType": "SS"},
+        {"name": "Model list to client", "taskType": "C"},
+        {"name": "Model Approval", "taskType": "C"},
+        {"name": "PPM", "taskType": "C"},
+        {"name": "Shoot", "taskType": "SS"},
+        {"name": "Internal KT Post", "taskType": "SS"},
+        {"name": "Edits", "taskType": "SS"},
+        {"name": "Feedback", "taskType": "C"},
+        {"name": "Revision", "taskType": "SS"},
+        {"name": "Project Closed", "taskType": "C"}
+    ]
+    
+    return [
+        {
+            **stage,
+            "startDate": None,
+            "endDate": None,
+            "duration": 0,
+            "extraDays": 0,
+            "completed": False,
+            "status": "not_started"
+        }
+        for stage in stages
+    ]
 
 
 @api_router.post("/projects", response_model=Project)
 async def create_project(input: ProjectCreate):
+    if not input.workflowStages:
+        input.workflowStages = create_default_workflow_stages()
+    
     project_obj = Project(**input.model_dump())
     doc = project_obj.model_dump()
     await db.projects.insert_one(doc)
@@ -162,74 +167,39 @@ async def update_project(project_id: str, update: ProjectUpdate):
     return project
 
 
-@api_router.post("/tasks", response_model=Task)
-async def create_task(input: TaskCreate):
-    task_obj = Task(**input.model_dump())
-    doc = task_obj.model_dump()
-    await db.tasks.insert_one(doc)
-    return task_obj
-
-
-@api_router.get("/tasks/project/{project_id}", response_model=List[Task])
-async def get_project_tasks(project_id: str):
-    tasks = await db.tasks.find({"projectId": project_id}, {"_id": 0}).to_list(1000)
-    return tasks
-
-
-@api_router.get("/tasks/user/{user_name}", response_model=List[Task])
-async def get_user_tasks(user_name: str):
-    tasks = await db.tasks.find({"assignedTo": user_name}, {"_id": 0}).to_list(1000)
-    return tasks
-
-
-@api_router.patch("/tasks/{task_id}", response_model=Task)
-async def update_task(task_id: str, update: TaskUpdate):
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No update data provided")
+@api_router.patch("/projects/{project_id}/stages/{stage_index}")
+async def update_stage(project_id: str, stage_index: int, update: StageUpdate):
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
     
-    result = await db.tasks.update_one(
-        {"id": task_id},
-        {"$set": update_data}
+    stages = project.get("workflowStages", [])
+    if stage_index >= len(stages):
+        raise HTTPException(status_code=404, detail="Stage not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    for key, value in update_data.items():
+        stages[stage_index][key] = value
+    
+    await db.projects.update_one(
+        {"id": project_id},
+        {"$set": {"workflowStages": stages}}
     )
     
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Task not found")
-    
-    task = await db.tasks.find_one({"id": task_id}, {"_id": 0})
-    return task
+    return {"message": "Stage updated", "stage": stages[stage_index]}
 
 
-@api_router.post("/approvals", response_model=Approval)
-async def create_approval(input: ApprovalCreate):
-    approval_obj = Approval(**input.model_dump())
-    doc = approval_obj.model_dump()
-    await db.approvals.insert_one(doc)
-    return approval_obj
+@api_router.delete("/projects/{project_id}")
+async def delete_project(project_id: str):
+    result = await db.projects.delete_one({"id": project_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"message": "Project deleted"}
 
 
-@api_router.get("/approvals/project/{project_id}", response_model=List[Approval])
-async def get_project_approvals(project_id: str):
-    approvals = await db.approvals.find({"projectId": project_id}, {"_id": 0}).to_list(1000)
-    return approvals
-
-
-@api_router.patch("/approvals/{approval_id}", response_model=Approval)
-async def update_approval(approval_id: str, update: ApprovalUpdate):
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    if not update_data:
-        raise HTTPException(status_code=400, detail="No update data provided")
-    
-    result = await db.approvals.update_one(
-        {"id": approval_id},
-        {"$set": update_data}
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Approval not found")
-    
-    approval = await db.approvals.find_one({"id": approval_id}, {"_id": 0})
-    return approval
+@api_router.post("/projects/import-from-sheet")
+async def import_from_sheet(data: Dict):
+    return {"message": "Import endpoint ready", "received": len(data.get("projects", []))}
 
 
 app.include_router(api_router)
