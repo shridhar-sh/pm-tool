@@ -12,6 +12,7 @@ function DashboardLayout({ user, onLogout, children }) {
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
   ];
 
   const getInitials = (name) => {
