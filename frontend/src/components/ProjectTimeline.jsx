@@ -139,11 +139,11 @@ export default function ProjectTimeline({ project, onUpdate }) {
             <thead className="sticky top-0 bg-slate-50 z-10">
               <tr>
                 <th className="border border-slate-200 p-2 text-left min-w-[180px] sticky left-0 bg-slate-50 z-20">Task</th>
-                <th className="border border-slate-200 p-2 min-w-[80px]">Type</th>
+                <th className="border border-slate-200 p-2 min-w-[80px]\">Type</th>
                 <th className="border border-slate-200 p-2 min-w-[120px]">Start Date</th>
-                <th className="border border-slate-200 p-2 min-w-[120px]">End Date</th>
                 <th className="border border-slate-200 p-2 min-w-[80px]">Days</th>
-                <th className="border border-slate-200 p-2 min-w-[80px]">Extra</th>
+                <th className="border border-slate-200 p-2 min-w-[80px]">Extra Days</th>
+                <th className="border border-slate-200 p-2 min-w-[120px] bg-slate-100">End Date (Auto)</th>
                 {dates.map((date, idx) => (
                   <th key={idx} className="border border-slate-200 p-1 min-w-[30px] text-center text-xs">
                     <div className="transform -rotate-45 origin-center whitespace-nowrap">
