@@ -89,17 +89,32 @@ async def root():
 
 def create_default_workflow_stages():
     stages = [
-        {"name": "Onboarding", "taskType": "SS"},
-        {"name": "Strategy", "taskType": "SS"},
-        {"name": "Strategy Approval", "taskType": "C"},
-        {"name": "Products", "taskType": "C"},
-        {"name": "Pre Production", "taskType": "SS"},
-        {"name": "PPM", "taskType": "C"},
-        {"name": "Shoot", "taskType": "SS"},
-        {"name": "Edits", "taskType": "SS"},
-        {"name": "Feedback", "taskType": "C"},
-        {"name": "Revision", "taskType": "SS"},
-        {"name": "Final Approval", "taskType": "C"}
+        # Strategy Phase
+        {"name": "Onboarding Form", "taskType": "SS", "department": "strategy"},
+        {"name": "Onboarding", "taskType": "SS", "department": "strategy"},
+        {"name": "Products", "taskType": "C", "department": "strategy"},
+        {"name": "Research", "taskType": "SS", "department": "strategy"},
+        {"name": "Brainstorm Session", "taskType": "SS", "department": "strategy"},
+        
+        # Pre-Production Phase
+        {"name": "Scripts", "taskType": "SS", "department": "pre_production"},
+        {"name": "Scripts Approval", "taskType": "C", "department": "pre_production"},
+        {"name": "Model brief to LP", "taskType": "SS", "department": "pre_production"},
+        {"name": "Internal KT Production", "taskType": "SS", "department": "pre_production"},
+        {"name": "Storyboarding", "taskType": "SS", "department": "pre_production"},
+        
+        # Production Phase
+        {"name": "Model list to client", "taskType": "C", "department": "production"},
+        {"name": "Model Approval", "taskType": "C", "department": "production"},
+        {"name": "PPM", "taskType": "C", "department": "production"},
+        {"name": "Shoot", "taskType": "SS", "department": "production"},
+        
+        # Post-Production Phase
+        {"name": "Internal KT Post", "taskType": "SS", "department": "post_production"},
+        {"name": "Edits", "taskType": "SS", "department": "post_production"},
+        {"name": "Feedback", "taskType": "C", "department": "post_production"},
+        {"name": "Revision", "taskType": "SS", "department": "post_production"},
+        {"name": "Project Closed", "taskType": "C", "department": "post_production"}
     ]
     
     return [
@@ -110,6 +125,7 @@ def create_default_workflow_stages():
             "duration": 0,
             "extraDays": 0,
             "completed": False,
+            "started": False,
             "status": "not_started"
         }
         for stage in stages
