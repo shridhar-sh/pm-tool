@@ -47,7 +47,10 @@ export default function PMDashboardNew({ user }) {
     try {
       const response = await axios.get(`${API}/projects`);
       setProjects(response.data);
-      if (response.data.length > 0 && !selectedProject) {
+      if (id) {
+        const project = response.data.find(p => p.id === id);
+        if (project) setSelectedProject(project);
+      } else if (response.data.length > 0 && !selectedProject) {
         setSelectedProject(response.data[0]);
       }
     } catch (error) {
