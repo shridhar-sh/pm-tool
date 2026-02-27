@@ -20,9 +20,9 @@ function DashboardLayout({ user, onLogout, children }) {
 
   const navigation = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'AM Tracker', icon: List, path: '/am-tracker' },
+    { name: 'AM Tracker', icon: ListIcon, path: '/am-tracker' },
     { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
-    { name: 'Project Management', icon: Calendar, path: '/project-management' },
+    { name: 'Project Management', icon: CalendarIcon, path: '/project-management' },
   ];
 
   const getInitials = (name) => {
