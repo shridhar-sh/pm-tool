@@ -225,6 +225,31 @@ async def import_from_sheet(data: Dict):
     return {"message": "Import endpoint ready", "received": len(data.get("projects", []))}
 
 
+@api_router.get("/team-members", response_model=List[TeamMember])
+async def get_team_members():
+    members = await db.team_members.find({}, {"_id": 0}).to_list(1000)
+    return members
+
+
+@api_router.post("/team-members/bulk")
+async def create_bulk_team_members(input: BulkTeamMembersCreate):
+    members_to_insert = []
+    for member_data in input.members:
+        member = TeamMember(
+            employeeId=member_data["employeeId"],
+            name=member_data["name"],
+            role=member_data["role"],
+            department=member_data["department"],
+            pod=member_data.get("pod")
+        )
+        members_to_insert.append(member.model_dump())
+    
+    if members_to_insert:
+        await db.team_members.insert_many(members_to_insert)
+    
+    return {"message": f"Added {len(members_to_insert)} team members"}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
