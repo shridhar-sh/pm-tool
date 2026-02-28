@@ -250,6 +250,14 @@ async def create_bulk_team_members(input: BulkTeamMembersCreate):
     return {"message": f"Added {len(members_to_insert)} team members"}
 
 
+@api_router.delete("/team-members/{member_id}")
+async def delete_team_member(member_id: str):
+    result = await db.team_members.delete_one({"id": member_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    return {"message": "Team member deleted"}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
