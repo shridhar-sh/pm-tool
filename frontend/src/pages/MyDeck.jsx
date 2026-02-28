@@ -134,10 +134,11 @@ export default function MyDeck({ user }) {
     groupedProjects[pod] = {
       yet_to_start: projects.filter(p => p.pod === pod && p.statusCategory === 'yet_to_start'),
       strategy: projects.filter(p => p.pod === pod && p.statusCategory === 'strategy'),
+      pre_production: projects.filter(p => p.pod === pod && p.statusCategory === 'pre_production'),
       production: projects.filter(p => p.pod === pod && p.statusCategory === 'production'),
-      edits: projects.filter(p => p.pod === pod && p.statusCategory === 'edits'),
-      closed: projects.filter(p => p.pod === pod && p.statusCategory === 'closed'),
-      statics: projects.filter(p => p.pod === pod && p.statusCategory === 'statics')
+      post_production: projects.filter(p => p.pod === pod && p.statusCategory === 'post_production'),
+      correction_ongoing: projects.filter(p => p.pod === pod && p.statusCategory === 'correction_ongoing'),
+      closed: projects.filter(p => p.pod === pod && p.statusCategory === 'closed')
     };
   });
 
