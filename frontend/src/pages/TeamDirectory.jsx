@@ -232,6 +232,7 @@ export default function TeamDirectory({ user }) {
                       <tr>
                         <th className="border border-slate-200 p-3 text-left">Employee ID</th>
                         <th className="border border-slate-200 p-3 text-left">Name</th>
+                        <th className="border border-slate-200 p-3 text-left">Short Name</th>
                         <th className="border border-slate-200 p-3 text-left">Role</th>
                         <th className="border border-slate-200 p-3 text-left">Department</th>
                         <th className="border border-slate-200 p-3 text-center w-24">Action</th>
@@ -242,6 +243,38 @@ export default function TeamDirectory({ user }) {
                         <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                           <td className="border border-slate-200 p-3 font-mono text-xs">{member.employeeId}</td>
                           <td className="border border-slate-200 p-3 font-semibold">{member.name}</td>
+                          <td className="border border-slate-200 p-3">
+                            {editingShortName === member.id ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={tempShortName}
+                                  onChange={(e) => setTempShortName(e.target.value)}
+                                  className="h-8"
+                                  placeholder="Short name"
+                                />
+                                <Button size="sm" variant="ghost" onClick={() => handleUpdateShortName(member.id)}>
+                                  <Check className="w-4 h-4 text-green-600" />
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => setEditingShortName(null)}>
+                                  <X className="w-4 h-4 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-slate-600">{member.shortName || '-'}</span>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingShortName(member.id);
+                                    setTempShortName(member.shortName || '');
+                                  }}
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </td>
                           <td className="border border-slate-200 p-3">{member.role}</td>
                           <td className="border border-slate-200 p-3 text-slate-600">{member.department}</td>
                           <td className="border border-slate-200 p-3 text-center">
