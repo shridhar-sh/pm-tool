@@ -12,6 +12,7 @@ import PMDashboardNew from '@/pages/PMDashboardNew';
 import AMDashboard from '@/pages/AMDashboard';
 import LPDashboard from '@/pages/LPDashboard';
 import TeamDashboard from '@/pages/TeamDashboard';
+import TeamDirectory from '@/pages/TeamDirectory';
 import ProjectDetail from '@/pages/ProjectDetail';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
