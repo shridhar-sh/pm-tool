@@ -214,7 +214,9 @@ export default function Dashboard({ user }) {
                   </SelectTrigger>
                   <SelectContent>
                     {getCreativeStrategists(newProject.pod).map(cs => (
-                      <SelectItem key={cs.id} value={cs.name}>{cs.name}</SelectItem>
+                      <SelectItem key={cs.id} value={cs.shortName || cs.name}>
+                        {cs.shortName || cs.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
