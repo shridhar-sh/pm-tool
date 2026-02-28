@@ -104,18 +104,10 @@ export default function ProjectTimeline({ project, onUpdate }) {
     const updatedStages = [...stages];
     updatedStages[stageIndex][field] = value;
     
-    // Auto-calculate end date when start date, duration, or extra days change
-    if (field === 'startDate' || field === 'duration' || field === 'extraDays') {
-      const start = updatedStages[stageIndex].startDate;
-      const duration = parseInt(updatedStages[stageIndex].duration) || 0;
-      const extra = parseInt(updatedStages[stageIndex].extraDays) || 0;
-      
-      if (start && (duration > 0 || extra > 0)) {
-        const startDate = parseISO(start);
-        const totalDays = duration + extra;
-        const calculatedEndDate = addDays(startDate, totalDays - 1);
-        updatedStages[stageIndex].endDate = format(calculatedEndDate, 'yyyy-MM-dd');
-      }
+    // Auto-calculate dates when duration or extra days change
+    if (field === 'duration' || field === 'extraDays') {
+      autoCalculateStageDates(updatedStages);
+      return; // autoCalculateStageDates already calls onUpdate
     }
     
     setStages(updatedStages);
@@ -123,6 +115,30 @@ export default function ProjectTimeline({ project, onUpdate }) {
     if (onUpdate) {
       onUpdate({ workflowStages: updatedStages });
     }
+  };
+
+  const handleAddExtraDay = (stageIndex, date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const key = `${stageIndex}-${dateStr}`;
+    
+    // Toggle E marker
+    const newMarkers = { ...extraDayMarkers };
+    if (newMarkers[key]) {
+      delete newMarkers[key];
+    } else {
+      newMarkers[key] = true;
+    }
+    setExtraDayMarkers(newMarkers);
+    
+    // Count total E markers for this stage
+    const stageMarkers = Object.keys(newMarkers).filter(k => k.startsWith(`${stageIndex}-`)).length;
+    
+    // Update stage extra days
+    const updatedStages = [...stages];
+    updatedStages[stageIndex].extraDays = stageMarkers;
+    
+    // Recalculate all dates
+    autoCalculateStageDates(updatedStages);
   };
 
   if (!project) {
