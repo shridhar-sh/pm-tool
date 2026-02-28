@@ -239,6 +239,85 @@ export default function TeamDirectory({ user }) {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Employee</DialogTitle>
+              <DialogDescription>Update employee details</DialogDescription>
+            </DialogHeader>
+            {editingMember && (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Employee ID *</Label>
+                  <Input
+                    value={editingMember.employeeId}
+                    onChange={(e) => setEditingMember({ ...editingMember, employeeId: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Full Name *</Label>
+                  <Input
+                    value={editingMember.name}
+                    onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Short Name</Label>
+                  <Input
+                    value={editingMember.shortName || ''}
+                    onChange={(e) => setEditingMember({ ...editingMember, shortName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Role *</Label>
+                  <Input
+                    value={editingMember.role}
+                    onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department *</Label>
+                  <Select value={editingMember.department} onValueChange={(value) => setEditingMember({ ...editingMember, department: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Management">Management</SelectItem>
+                      <SelectItem value="Heads of Departments">Heads of Departments</SelectItem>
+                      <SelectItem value="Operations Team">Operations Team</SelectItem>
+                      <SelectItem value="Strategy Team">Strategy Team</SelectItem>
+                      <SelectItem value="Production Team">Production Team</SelectItem>
+                      <SelectItem value="Post Production Team">Post Production Team</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>POD</Label>
+                  <Select value={editingMember.pod || 'none'} onValueChange={(value) => setEditingMember({ ...editingMember, pod: value === 'none' ? null : value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="POD 1">POD 1</SelectItem>
+                      <SelectItem value="POD 2">POD 2</SelectItem>
+                      <SelectItem value="POD 3">POD 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditMember} className="bg-slate-900 hover:bg-slate-800">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
