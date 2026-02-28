@@ -88,12 +88,20 @@ export default function ProjectTimeline({ project, onUpdate }) {
   const getCellColor = (stage, date) => {
     if (!stage.startDate || !stage.endDate) return '';
     
-    if (isDateInRange(format(date, 'yyyy-MM-dd'), stage.startDate, stage.endDate)) {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const key = `${stages.indexOf(stage)}-${dateStr}`;
+    
+    // Show E marker
+    if (extraDayMarkers[key]) {
+      return 'bg-red-300 relative';
+    }
+    
+    if (isDateInRange(dateStr, stage.startDate, stage.endDate)) {
       if (stage.completed) {
         return stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
       }
       if (stage.extraDays > 0) {
-        return 'bg-red-200';
+        return 'bg-red-100';
       }
       return stage.taskType === 'SS' ? 'bg-blue-100' : 'bg-yellow-100';
     }
