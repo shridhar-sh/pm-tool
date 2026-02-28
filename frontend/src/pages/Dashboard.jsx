@@ -160,14 +160,106 @@ export default function Dashboard({ user }) {
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-slate-600 mt-1">Welcome back, {user.name}! Here's your project overview</p>
         </div>
-        <Button
-          onClick={() => navigate('/am-tracker')}
-          className="bg-slate-900 hover:bg-slate-800"
-          data-testid="add-project-button"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add New Project
-        </Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-slate-900 hover:bg-slate-800" data-testid="add-project-button">
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Project
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Quick Add Project</DialogTitle>
+              <DialogDescription>Enter project details - team members from your directory</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Brand Name *</Label>
+                <Input
+                  value={newProject.name}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                  placeholder="Urban Jungle"
+                  data-testid="project-name-input"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>POD *</Label>
+                  <Select value={newProject.pod} onValueChange={(value) => setNewProject({ ...newProject, pod: value, csDoneBy: '' })}>
+                    <SelectTrigger data-testid="pod-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="POD 1">POD 1</SelectItem>
+                      <SelectItem value="POD 2">POD 2</SelectItem>
+                      <SelectItem value="POD 3">POD 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Start Date *</Label>
+                  <Input
+                    type="date"
+                    value={newProject.projectStartDate}
+                    onChange={(e) => setNewProject({ ...newProject, projectStartDate: e.target.value })}
+                    data-testid="start-date-input"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Creative Strategist *</Label>
+                <Select value={newProject.csDoneBy} onValueChange={(value) => setNewProject({ ...newProject, csDoneBy: value })}>
+                  <SelectTrigger data-testid="cs-select">
+                    <SelectValue placeholder="Select CS from POD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCreativeStrategists(newProject.pod).map(cs => (
+                      <SelectItem key={cs.id} value={cs.name}>{cs.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Line Producer</Label>
+                <Select value={newProject.assignedLP} onValueChange={(value) => setNewProject({ ...newProject, assignedLP: value })}>
+                  <SelectTrigger data-testid="lp-select">
+                    <SelectValue placeholder="Select Line Producer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getLineProducers().map(lp => (
+                      <SelectItem key={lp.id} value={lp.name}>{lp.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Client Name (Optional)</Label>
+                <Input
+                  value={newProject.client}
+                  onChange={(e) => setNewProject({ ...newProject, client: e.target.value })}
+                  placeholder="Same as brand"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SOW (Optional)</Label>
+                <Textarea
+                  value={newProject.sow}
+                  onChange={(e) => setNewProject({ ...newProject, sow: e.target.value })}
+                  placeholder="8 Ads - 2 creators - 6 statics"
+                  rows={2}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateProject} className="bg-slate-900 hover:bg-slate-800" data-testid="submit-project-button">
+                Create Project
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
