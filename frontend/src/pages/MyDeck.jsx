@@ -51,6 +51,53 @@ export default function MyDeck({ user }) {
     }
   };
 
+  const fetchTeam = async () => {
+    try {
+      const response = await axios.get(`${API}/team-members`);
+      setTeam(response.data);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleEditProject = async () => {
+    if (!editingProject.name || !editingProject.csDoneBy) {
+      toast.error('Please fill required fields');
+      return;
+    }
+
+    try {
+      await axios.patch(`${API}/projects/${editingProject.id}`, {
+        name: editingProject.name,
+        client: editingProject.client,
+        sow: editingProject.sow,
+        csDoneBy: editingProject.csDoneBy,
+        pod: editingProject.pod,
+        assignedLP: editingProject.assignedLP,
+        projectStartDate: editingProject.projectStartDate,
+        projectEndDate: editingProject.projectEndDate
+      });
+
+      toast.success('Project updated!');
+      setEditDialogOpen(false);
+      fetchProjects();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to update project');
+    }
+  };
+
+  const getCreativeStrategists = (selectedPod) => {
+    return team.filter(t => 
+      t.role === 'Creative Strategist' && 
+      t.pod === selectedPod
+    );
+  };
+
+  const getLineProducers = () => {
+    return team.filter(t => t.role === 'Line Producer');
+  };
+
   const handleQuickAdd = async () => {
     if (!quickAdd.name || !quickAdd.projectStartDate || !quickAdd.csDoneBy) {
       toast.error('Please fill Brand Name, Start Date, and CS');
