@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Users } from 'lucide-react';
+import { Users, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import axios from 'axios';
 import { toast } from 'sonner';
 
@@ -10,6 +15,14 @@ const API = `${BACKEND_URL}/api`;
 export default function TeamDirectory({ user }) {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newMember, setNewMember] = useState({
+    employeeId: '',
+    name: '',
+    role: '',
+    department: '',
+    pod: ''
+  });
 
   useEffect(() => {
     fetchTeam();
@@ -24,6 +37,33 @@ export default function TeamDirectory({ user }) {
       toast.error('Failed to load team');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!newMember.employeeId || !newMember.name || !newMember.role || !newMember.department) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    try {
+      await axios.post(`${API}/team-members/bulk`, {
+        members: [{
+          employeeId: newMember.employeeId,
+          name: newMember.name,
+          role: newMember.role,
+          department: newMember.department,
+          pod: newMember.pod || null
+        }]
+      });
+      
+      toast.success(`${newMember.name} added to team!`);
+      setNewMember({ employeeId: '', name: '', role: '', department: '', pod: '' });
+      setDialogOpen(false);
+      fetchTeam();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to add team member');
     }
   };
 
