@@ -89,6 +89,18 @@ class BulkTeamMembersCreate(BaseModel):
     members: List[Dict]
 
 
+@api_router.patch("/team-members/{member_id}")
+async def update_team_member(member_id: str, update_data: Dict):
+    result = await db.team_members.update_one(
+        {"id": member_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Team member not found")
+    member = await db.team_members.find_one({"id": member_id}, {"_id": 0})
+    return member
+
+
 class StageUpdate(BaseModel):
     startDate: Optional[str] = None
     endDate: Optional[str] = None
