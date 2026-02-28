@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,13 +10,52 @@ function DashboardLayout({ user, onLogout, children }) {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const navigation = [
-    { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { name: 'AM Tracker', icon: LayoutDashboard, path: '/am-tracker' },
-    { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
-    { name: 'Project Management', icon: LayoutDashboard, path: '/project-management' },
-    { name: 'Team Directory', icon: LayoutDashboard, path: '/team-directory' },
-  ];
+  // Role-based navigation items
+  const getNavigationForRole = (role) => {
+    const allNavItems = {
+      dashboard: { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      amTracker: { name: 'AM Tracker', icon: ClipboardList, path: '/am-tracker' },
+      myTasks: { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
+      projectManagement: { name: 'Project Management', icon: Calendar, path: '/project-management' },
+      teamDirectory: { name: 'Team Directory', icon: Users, path: '/team-directory' },
+    };
+
+    switch (role) {
+      case 'project_manager':
+        // PM: Full access - all navigation items
+        return [
+          allNavItems.dashboard,
+          allNavItems.amTracker,
+          allNavItems.myTasks,
+          allNavItems.projectManagement,
+          allNavItems.teamDirectory,
+        ];
+      case 'account_manager':
+        // AM: Dashboard, AM Tracker, My Tasks
+        return [
+          allNavItems.dashboard,
+          allNavItems.amTracker,
+          allNavItems.myTasks,
+        ];
+      case 'line_producer':
+        // LP: Dashboard, My Tasks, Project Management (for production schedules)
+        return [
+          allNavItems.dashboard,
+          allNavItems.myTasks,
+          allNavItems.projectManagement,
+        ];
+      case 'team_member':
+        // Team Member: Dashboard, My Tasks only
+        return [
+          allNavItems.dashboard,
+          allNavItems.myTasks,
+        ];
+      default:
+        return [allNavItems.dashboard];
+    }
+  };
+
+  const navigation = getNavigationForRole(user.role);
 
   const getInitials = (name) => {
     return name
