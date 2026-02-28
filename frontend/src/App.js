@@ -120,6 +120,18 @@ function App() {
             }
           />
           <Route
+            path="/team-directory"
+            element={
+              user ? (
+                <DashboardLayout user={user} onLogout={handleLogout}>
+                  <TeamDirectory user={user} />
+                </DashboardLayout>
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+          <Route
             path="/project/:id"
             element={
               user ? (
