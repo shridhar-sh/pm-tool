@@ -229,7 +229,9 @@ export default function Dashboard({ user }) {
                   </SelectTrigger>
                   <SelectContent>
                     {getLineProducers().map(lp => (
-                      <SelectItem key={lp.id} value={lp.name}>{lp.name}</SelectItem>
+                      <SelectItem key={lp.id} value={lp.shortName || lp.name}>
+                        {lp.shortName || lp.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
