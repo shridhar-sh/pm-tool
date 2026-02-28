@@ -13,9 +13,22 @@ export default function Dashboard({ user }) {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [team, setTeam] = useState([]);
+  
+  const [newProject, setNewProject] = useState({
+    name: '',
+    client: '',
+    projectStartDate: '',
+    csDoneBy: '',
+    pod: 'POD 1',
+    sow: '',
+    assignedLP: ''
+  });
 
   useEffect(() => {
     fetchProjects();
+    fetchTeam();
   }, []);
 
   const fetchProjects = async () => {
@@ -28,6 +41,60 @@ export default function Dashboard({ user }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTeam = async () => {
+    try {
+      const response = await axios.get(`${API}/team-members`);
+      setTeam(response.data);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleCreateProject = async () => {
+    if (!newProject.name || !newProject.projectStartDate || !newProject.csDoneBy) {
+      toast.error('Please fill Brand Name, Start Date, and CS');
+      return;
+    }
+
+    try {
+      const endDate = new Date(newProject.projectStartDate);
+      endDate.setDate(endDate.getDate() + 30);
+
+      const response = await axios.post(`${API}/projects`, {
+        name: newProject.name,
+        client: newProject.client || newProject.name,
+        sow: newProject.sow || '8 Ads - 2 creators',
+        csDoneBy: newProject.csDoneBy,
+        projectStartDate: newProject.projectStartDate,
+        projectEndDate: endDate.toISOString().split('T')[0],
+        statusCategory: 'yet_to_start',
+        pod: newProject.pod,
+        assignedLP: newProject.assignedLP,
+        assignedAM: user.name,
+        createdBy: user.name
+      });
+
+      toast.success(`✅ ${newProject.name} created!`);
+      setNewProject({ name: '', client: '', projectStartDate: '', csDoneBy: '', pod: 'POD 1', sow: '', assignedLP: '' });
+      setDialogOpen(false);
+      fetchProjects();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to create project');
+    }
+  };
+
+  const getCreativeStrategists = (selectedPod) => {
+    return team.filter(t => 
+      t.role === 'Creative Strategist' && 
+      t.pod === selectedPod
+    );
+  };
+
+  const getLineProducers = () => {
+    return team.filter(t => t.role === 'Line Producer');
   };
 
   const stats = {
