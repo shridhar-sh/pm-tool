@@ -21,6 +21,9 @@ export default function MyDeck({ user }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [team, setTeam] = useState([]);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
 
   const [quickAdd, setQuickAdd] = useState({
     name: '',
@@ -33,6 +36,7 @@ export default function MyDeck({ user }) {
 
   useEffect(() => {
     fetchProjects();
+    fetchTeam();
   }, []);
 
   const fetchProjects = async () => {
