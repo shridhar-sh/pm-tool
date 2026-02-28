@@ -127,8 +127,8 @@ export default function AMDashboard({ user }) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
                       <h3 className="font-semibold text-slate-900">{project.name}</h3>
-                      <Badge className={`${getStatusColor(project.status)} text-xs rounded-full border`}>
-                        {project.status.replace('_', ' ')}
+                      <Badge className={`${getStatusColor(project.statusCategory)} text-xs rounded-full border`}>
+                        {(project.statusCategory || 'unknown').replace('_', ' ')}
                       </Badge>
                     </div>
                     <p className="text-sm text-slate-600">{project.client}</p>
@@ -136,7 +136,7 @@ export default function AMDashboard({ user }) {
                   <div className="text-right">
                     <div className="flex items-center gap-2 text-sm text-slate-500">
                       <Clock className="w-4 h-4" />
-                      <span className="mono">{new Date(project.deadline).toLocaleDateString()}</span>
+                      <span className="mono">{project.projectEndDate ? new Date(project.projectEndDate).toLocaleDateString() : '-'}</span>
                     </div>
                   </div>
                 </div>
