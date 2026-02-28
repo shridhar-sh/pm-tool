@@ -246,32 +246,6 @@ async def shutdown_db_client():
     client.close()
 
 
-
-# Team Members endpoints
-class TeamMember(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    employeeId: str
-    name: str
-    role: str
-    department: str
-    pod: Optional[str] = None
-    active: bool = True
-    createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-
-class TeamMemberCreate(BaseModel):
-    employeeId: str
-    name: str
-    role: str
-    department: str
-    pod: Optional[str] = None
-
-
-class BulkTeamMembersCreate(BaseModel):
-    members: List[Dict]
-
-
 @api_router.get("/team-members", response_model=List[TeamMember])
 async def get_team_members():
     members = await db.team_members.find({}, {"_id": 0}).to_list(1000)
