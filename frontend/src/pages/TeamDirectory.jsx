@@ -16,6 +16,8 @@ export default function TeamDirectory({ user }) {
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
   const [newMember, setNewMember] = useState({
     employeeId: '',
     name: '',
