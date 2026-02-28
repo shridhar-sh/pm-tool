@@ -11,13 +11,45 @@ export default function ProjectTimeline({ project, onUpdate }) {
   const [stages, setStages] = useState(project?.workflowStages || []);
   const [dateRange, setDateRange] = useState({ start: null, end: null });
   const [dates, setDates] = useState([]);
+  const [extraDayMarkers, setExtraDayMarkers] = useState({}); // {stageIdx-dateStr: true}
 
   useEffect(() => {
     if (project) {
       setStages(project.workflowStages || []);
       calculateDateRange();
+      autoCalculateStageDates(project.workflowStages);
     }
   }, [project]);
+
+  const autoCalculateStageDates = (workflowStages) => {
+    if (!project?.projectStartDate) return;
+    
+    const updatedStages = [...workflowStages];
+    let currentDate = parseISO(project.projectStartDate);
+    
+    updatedStages.forEach((stage, idx) => {
+      // Set start date (first stage uses project start, others use day after previous ends)
+      stage.startDate = format(currentDate, 'yyyy-MM-dd');
+      
+      // Calculate end date if duration is set
+      if (stage.duration > 0) {
+        const totalDays = stage.duration + (stage.extraDays || 0);
+        const endDate = addDays(currentDate, totalDays - 1);
+        stage.endDate = format(endDate, 'yyyy-MM-dd');
+        
+        // Next stage starts day after this ends
+        currentDate = addDays(endDate, 1);
+      } else {
+        stage.endDate = null;
+        // If no duration, next stage starts same day
+      }
+    });
+    
+    setStages(updatedStages);
+    if (onUpdate) {
+      onUpdate({ workflowStages: updatedStages });
+    }
+  };
 
   const calculateDateRange = () => {
     if (!project?.projectStartDate || !project?.projectEndDate) return;
