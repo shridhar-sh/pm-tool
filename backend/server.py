@@ -73,6 +73,21 @@ class ProjectUpdate(BaseModel):
     workflowStages: Optional[List[Dict]] = None
 
 
+class TeamMember(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    employeeId: str
+    name: str
+    role: str
+    department: str
+    pod: Optional[str] = None
+    active: bool = True
+
+
+class BulkTeamMembersCreate(BaseModel):
+    members: List[Dict]
+
+
 class StageUpdate(BaseModel):
     startDate: Optional[str] = None
     endDate: Optional[str] = None
