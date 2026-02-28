@@ -83,21 +83,37 @@ export default function MyDeck({ user }) {
       const updatedStages = [...project.workflowStages];
       updatedStages[stageIndex].completed = completed;
 
-      // Auto-calculate status based on stages
+      // Auto-calculate status based on the LAST completed stage
       let newStatus = 'yet_to_start';
-      const stageNames = updatedStages.map(s => s.name);
-      const completedStages = updatedStages.filter(s => s.completed).map(s => s.name);
+      
+      // Define stage groups
+      const stageGroups = {
+        'yet_to_start': ['Onboarding Form', 'Onboarding'],
+        'strategy': ['Products', 'Research', 'Brainstorm Session', 'Scripts', 'Scripts Approval'],
+        'pre_production': ['Model brief to LP', 'Internal KT Production', 'Storyboarding', 'Model list to client', 'Model Approval'],
+        'production': ['PPM', 'Shoot'],
+        'post_production': ['Internal KT Post', 'Edits', 'Feedback'],
+        'correction_ongoing': ['Revision'],
+        'closed': ['Project Closed']
+      };
 
-      if (completedStages.includes('Project Closed')) {
-        newStatus = 'closed';
-      } else if (completedStages.some(s => ['Edits', 'Feedback', 'Revision'].includes(s))) {
-        newStatus = 'edits';
-      } else if (completedStages.some(s => ['Shoot', 'PPM', 'Model Approval'].includes(s))) {
-        newStatus = 'production';
-      } else if (completedStages.some(s => ['Scripts', 'Storyboarding', 'Pre Production'].includes(s))) {
-        newStatus = 'production';
-      } else if (completedStages.some(s => ['Onboarding', 'Products', 'Research', 'Brainstorm Session'].includes(s))) {
-        newStatus = 'strategy';
+      // Find the last completed stage
+      let lastCompletedStage = null;
+      for (let i = updatedStages.length - 1; i >= 0; i--) {
+        if (updatedStages[i].completed) {
+          lastCompletedStage = updatedStages[i].name;
+          break;
+        }
+      }
+
+      // Determine status based on last completed stage
+      if (lastCompletedStage) {
+        for (const [status, stages] of Object.entries(stageGroups)) {
+          if (stages.includes(lastCompletedStage)) {
+            newStatus = status;
+            break;
+          }
+        }
       }
 
       await axios.patch(`${API}/projects/${projectId}`, {
