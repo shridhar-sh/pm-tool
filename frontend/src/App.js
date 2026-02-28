@@ -18,6 +18,28 @@ import ProjectDetail from '@/pages/ProjectDetail';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Role-based access control helper
+const hasAccess = (userRole, allowedRoles) => {
+  return allowedRoles.includes(userRole);
+};
+
+// Protected Route Component
+const ProtectedRoute = ({ user, allowedRoles, children, onLogout }) => {
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!hasAccess(user.role, allowedRoles)) {
+    return <Navigate to="/" />;
+  }
+  
+  return (
+    <DashboardLayout user={user} onLogout={onLogout}>
+      {children}
+    </DashboardLayout>
+  );
+};
+
 function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -48,6 +70,14 @@ function App() {
     );
   }
 
+  // Define role permissions
+  const ROLES = {
+    PM: 'project_manager',
+    AM: 'account_manager',
+    LP: 'line_producer',
+    TEAM: 'team_member'
+  };
+
   return (
     <div className="App">
       <BrowserRouter>
@@ -56,91 +86,105 @@ function App() {
             path="/login"
             element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />}
           />
+          
+          {/* Dashboard - each role sees their own dashboard */}
           <Route
             path="/"
             element={
               user ? (
                 <DashboardLayout user={user} onLogout={handleLogout}>
-                  {user.role === 'project_manager' && <Dashboard user={user} />}
-                  {user.role === 'account_manager' && <AMDashboard user={user} />}
-                  {user.role === 'line_producer' && <LPDashboard user={user} />}
-                  {user.role === 'team_member' && <TeamDashboard user={user} />}
+                  {user.role === ROLES.PM && <Dashboard user={user} />}
+                  {user.role === ROLES.AM && <AMDashboard user={user} />}
+                  {user.role === ROLES.LP && <LPDashboard user={user} />}
+                  {user.role === ROLES.TEAM && <TeamDashboard user={user} />}
                 </DashboardLayout>
               ) : (
                 <Navigate to="/login" />
               )
             }
           />
+          
+          {/* AM Tracker - PM and AM only */}
           <Route
             path="/am-tracker"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <MyDeck user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM, ROLES.AM]} 
+                onLogout={handleLogout}
+              >
+                <MyDeck user={user} />
+              </ProtectedRoute>
             }
           />
+          
+          {/* Project Management - PM and LP only */}
           <Route
             path="/project-management"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <PMDashboardNew user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM, ROLES.LP]} 
+                onLogout={handleLogout}
+              >
+                <PMDashboardNew user={user} />
+              </ProtectedRoute>
             }
           />
+          
+          {/* Timeline view - PM and LP only */}
           <Route
             path="/timelines/:id"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <PMDashboardNew user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM, ROLES.LP]} 
+                onLogout={handleLogout}
+              >
+                <PMDashboardNew user={user} />
+              </ProtectedRoute>
             }
           />
+          
+          {/* My Tasks - All roles */}
           <Route
             path="/my-tasks"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <TeamDashboard user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM, ROLES.AM, ROLES.LP, ROLES.TEAM]} 
+                onLogout={handleLogout}
+              >
+                <TeamDashboard user={user} />
+              </ProtectedRoute>
             }
           />
+          
+          {/* Team Directory - PM only */}
           <Route
             path="/team-directory"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <TeamDirectory user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM]} 
+                onLogout={handleLogout}
+              >
+                <TeamDirectory user={user} />
+              </ProtectedRoute>
             }
           />
+          
+          {/* Project Detail - All roles can view their assigned projects */}
           <Route
             path="/project/:id"
             element={
-              user ? (
-                <DashboardLayout user={user} onLogout={handleLogout}>
-                  <ProjectDetail user={user} />
-                </DashboardLayout>
-              ) : (
-                <Navigate to="/login" />
-              )
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM, ROLES.AM, ROLES.LP, ROLES.TEAM]} 
+                onLogout={handleLogout}
+              >
+                <ProjectDetail user={user} />
+              </ProtectedRoute>
             }
           />
         </Routes>
