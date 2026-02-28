@@ -83,12 +83,30 @@ export default function MyDeck({ user }) {
       const updatedStages = [...project.workflowStages];
       updatedStages[stageIndex].completed = completed;
 
+      // Auto-calculate status based on stages
+      let newStatus = 'yet_to_start';
+      const stageNames = updatedStages.map(s => s.name);
+      const completedStages = updatedStages.filter(s => s.completed).map(s => s.name);
+
+      if (completedStages.includes('Project Closed')) {
+        newStatus = 'closed';
+      } else if (completedStages.some(s => ['Edits', 'Feedback', 'Revision'].includes(s))) {
+        newStatus = 'edits';
+      } else if (completedStages.some(s => ['Shoot', 'PPM', 'Model Approval'].includes(s))) {
+        newStatus = 'production';
+      } else if (completedStages.some(s => ['Scripts', 'Storyboarding', 'Pre Production'].includes(s))) {
+        newStatus = 'production';
+      } else if (completedStages.some(s => ['Onboarding', 'Products', 'Research', 'Brainstorm Session'].includes(s))) {
+        newStatus = 'strategy';
+      }
+
       await axios.patch(`${API}/projects/${projectId}`, {
-        workflowStages: updatedStages
+        workflowStages: updatedStages,
+        statusCategory: newStatus
       });
 
       setProjects(projects.map(p =>
-        p.id === projectId ? { ...p, workflowStages: updatedStages } : p
+        p.id === projectId ? { ...p, workflowStages: updatedStages, statusCategory: newStatus } : p
       ));
     } catch (error) {
       console.error('Error:', error);
