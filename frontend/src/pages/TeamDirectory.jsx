@@ -151,6 +151,16 @@ export default function TeamDirectory({ user }) {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="emp-short">Short Name *</Label>
+                <Input
+                  id="emp-short"
+                  placeholder="John (used in dropdowns)"
+                  value={newMember.shortName}
+                  onChange={(e) => setNewMember({ ...newMember, shortName: e.target.value })}
+                  data-testid="employee-short-input"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="emp-role">Role *</Label>
                 <Input
                   id="emp-role"
