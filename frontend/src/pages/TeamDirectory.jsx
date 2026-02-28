@@ -306,15 +306,29 @@ export default function TeamDirectory({ user }) {
                           <td className="border border-slate-200 p-3">{member.role}</td>
                           <td className="border border-slate-200 p-3 text-slate-600">{member.department}</td>
                           <td className="border border-slate-200 p-3 text-center">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteMember(member.id, member.name)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                              data-testid={`delete-${member.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center justify-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingMember(member);
+                                  setEditDialogOpen(true);
+                                }}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                data-testid={`edit-${member.id}`}
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteMember(member.id, member.name)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                data-testid={`delete-${member.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
