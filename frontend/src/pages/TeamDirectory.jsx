@@ -67,6 +67,21 @@ export default function TeamDirectory({ user }) {
     }
   };
 
+  const handleDeleteMember = async (memberId, memberName) => {
+    if (!window.confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/team-members/${memberId}`);
+      toast.success(`${memberName} removed from team`);
+      fetchTeam();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to remove team member');
+    }
+  };
+
   const groupedTeam = {
     Management: team.filter(t => t.department === 'Management'),
     'Heads of Departments': team.filter(t => t.department === 'Heads of Departments'),
