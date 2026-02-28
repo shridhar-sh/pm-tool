@@ -88,6 +88,32 @@ export default function TeamDirectory({ user }) {
     }
   };
 
+  const handleEditMember = async () => {
+    if (!editingMember.employeeId || !editingMember.name || !editingMember.role || !editingMember.department) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+
+    try {
+      await axios.patch(`${API}/team-members/${editingMember.id}`, {
+        employeeId: editingMember.employeeId,
+        name: editingMember.name,
+        shortName: editingMember.shortName,
+        role: editingMember.role,
+        department: editingMember.department,
+        pod: editingMember.pod || null
+      });
+      
+      toast.success(`${editingMember.name} updated!`);
+      setEditDialogOpen(false);
+      setEditingMember(null);
+      fetchTeam();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to update');
+    }
+  };
+
   const handleDeleteMember = async (memberId, memberName) => {
     if (!window.confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
       return;
