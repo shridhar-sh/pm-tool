@@ -15,6 +15,7 @@ function DashboardLayout({ user, onLogout, children }) {
     { name: 'AM Tracker', icon: LayoutDashboard, path: '/am-tracker' },
     { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
     { name: 'Project Management', icon: LayoutDashboard, path: '/project-management' },
+    { name: 'Team Directory', icon: LayoutDashboard, path: '/team-directory' },
   ];
 
   const getInitials = (name) => {
