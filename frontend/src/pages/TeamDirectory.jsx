@@ -205,6 +205,7 @@ export default function TeamDirectory({ user }) {
                         <th className="border border-slate-200 p-3 text-left">Name</th>
                         <th className="border border-slate-200 p-3 text-left">Role</th>
                         <th className="border border-slate-200 p-3 text-left">Department</th>
+                        <th className="border border-slate-200 p-3 text-center w-24">Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -214,6 +215,17 @@ export default function TeamDirectory({ user }) {
                           <td className="border border-slate-200 p-3 font-semibold">{member.name}</td>
                           <td className="border border-slate-200 p-3">{member.role}</td>
                           <td className="border border-slate-200 p-3 text-slate-600">{member.department}</td>
+                          <td className="border border-slate-200 p-3 text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteMember(member.id, member.name)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              data-testid={`delete-${member.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
