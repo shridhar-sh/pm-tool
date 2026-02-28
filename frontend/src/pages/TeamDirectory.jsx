@@ -19,10 +19,14 @@ export default function TeamDirectory({ user }) {
   const [newMember, setNewMember] = useState({
     employeeId: '',
     name: '',
+    shortName: '',
     role: '',
     department: '',
     pod: ''
   });
+
+  const [editingShortName, setEditingShortName] = useState(null);
+  const [tempShortName, setTempShortName] = useState('');
 
   useEffect(() => {
     fetchTeam();
