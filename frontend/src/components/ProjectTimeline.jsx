@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { format, addDays, differenceInDays, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
+import { format, addDays, parseISO, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ProjectTimeline({ project, onUpdate }) {
