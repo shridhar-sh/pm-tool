@@ -368,13 +368,27 @@ export default function MyDeck({ user }) {
                         {projectList.map((project) => (
                           <tr key={project.id} className="hover:bg-slate-50">
                             <td className="border border-slate-200 p-2 bg-blue-100">
-                              <button
-                                onClick={() => navigate(`/timelines/${project.id}`)}
-                                className="text-left font-medium text-blue-900 hover:underline"
-                                data-testid={`project-link-${project.id}`}
-                              >
-                                {project.name}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => navigate(`/timelines/${project.id}`)}
+                                  className="text-left font-medium text-blue-900 hover:underline flex-1"
+                                  data-testid={`project-link-${project.id}`}
+                                >
+                                  {project.name}
+                                </button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingProject(project);
+                                    setEditDialogOpen(true);
+                                  }}
+                                  className="text-blue-700 hover:bg-blue-200"
+                                  data-testid={`edit-project-${project.id}`}
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </Button>
+                              </div>
                             </td>
                             <td className="border border-slate-200 p-2 bg-blue-50 text-xs">
                               {project.sow}
