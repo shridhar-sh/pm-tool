@@ -426,6 +426,112 @@ export default function MyDeck({ user }) {
       {loading && (
         <div className="text-center py-12 text-slate-500">Loading projects...</div>
       )}
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Project</DialogTitle>
+            <DialogDescription>Update project details</DialogDescription>
+          </DialogHeader>
+          {editingProject && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Brand Name *</Label>
+                <Input
+                  value={editingProject.name}
+                  onChange={(e) => setEditingProject({ ...editingProject, name: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>POD *</Label>
+                  <Select value={editingProject.pod} onValueChange={(value) => setEditingProject({ ...editingProject, pod: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="POD 1">POD 1</SelectItem>
+                      <SelectItem value="POD 2">POD 2</SelectItem>
+                      <SelectItem value="POD 3">POD 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Creative Strategist *</Label>
+                  <Select value={editingProject.csDoneBy} onValueChange={(value) => setEditingProject({ ...editingProject, csDoneBy: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getCreativeStrategists(editingProject.pod).map(cs => (
+                        <SelectItem key={cs.id} value={cs.shortName || cs.name}>
+                          {cs.shortName || cs.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Line Producer</Label>
+                <Select value={editingProject.assignedLP || ''} onValueChange={(value) => setEditingProject({ ...editingProject, assignedLP: value })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select LP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getLineProducers().map(lp => (
+                      <SelectItem key={lp.id} value={lp.shortName || lp.name}>
+                        {lp.shortName || lp.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <Input
+                    type="date"
+                    value={editingProject.projectStartDate}
+                    onChange={(e) => setEditingProject({ ...editingProject, projectStartDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <Input
+                    type="date"
+                    value={editingProject.projectEndDate}
+                    onChange={(e) => setEditingProject({ ...editingProject, projectEndDate: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Client Name</Label>
+                <Input
+                  value={editingProject.client}
+                  onChange={(e) => setEditingProject({ ...editingProject, client: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>SOW</Label>
+                <Textarea
+                  value={editingProject.sow}
+                  onChange={(e) => setEditingProject({ ...editingProject, sow: e.target.value })}
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditProject} className="bg-slate-900 hover:bg-slate-800">
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
