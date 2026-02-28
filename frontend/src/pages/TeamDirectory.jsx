@@ -78,9 +78,95 @@ export default function TeamDirectory({ user }) {
 
   return (
     <div className="p-6 md:p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Team Directory</h1>
-        <p className="text-slate-600 mt-1">All team members organized by department and POD</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Team Directory</h1>
+          <p className="text-slate-600 mt-1">All team members organized by department and POD</p>
+        </div>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-slate-900 hover:bg-slate-800" data-testid="add-employee-button">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Employee
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Add New Employee</DialogTitle>
+              <DialogDescription>Add a new team member to the directory</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="emp-id">Employee ID *</Label>
+                <Input
+                  id="emp-id"
+                  placeholder="EF-052"
+                  value={newMember.employeeId}
+                  onChange={(e) => setNewMember({ ...newMember, employeeId: e.target.value })}
+                  data-testid="employee-id-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emp-name">Full Name *</Label>
+                <Input
+                  id="emp-name"
+                  placeholder="John Doe"
+                  value={newMember.name}
+                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
+                  data-testid="employee-name-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emp-role">Role *</Label>
+                <Input
+                  id="emp-role"
+                  placeholder="Creative Strategist"
+                  value={newMember.role}
+                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
+                  data-testid="employee-role-input"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emp-dept">Department *</Label>
+                <Select value={newMember.department} onValueChange={(value) => setNewMember({ ...newMember, department: value })}>
+                  <SelectTrigger data-testid="employee-dept-select">
+                    <SelectValue placeholder="Select department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Management">Management</SelectItem>
+                    <SelectItem value="Heads of Departments">Heads of Departments</SelectItem>
+                    <SelectItem value="Operations Team">Operations Team</SelectItem>
+                    <SelectItem value="Strategy Team">Strategy Team</SelectItem>
+                    <SelectItem value="Production Team">Production Team</SelectItem>
+                    <SelectItem value="Post Production Team">Post Production Team</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="emp-pod">POD (Optional)</Label>
+                <Select value={newMember.pod} onValueChange={(value) => setNewMember({ ...newMember, pod: value })}>
+                  <SelectTrigger data-testid="employee-pod-select">
+                    <SelectValue placeholder="Select POD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="POD 1">POD 1</SelectItem>
+                    <SelectItem value="POD 2">POD 2</SelectItem>
+                    <SelectItem value="POD 3">POD 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddMember} className="bg-slate-900 hover:bg-slate-800" data-testid="submit-employee-button">
+                Add Employee
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {loading ? (
