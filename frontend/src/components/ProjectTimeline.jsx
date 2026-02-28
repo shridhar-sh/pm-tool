@@ -257,12 +257,24 @@ export default function ProjectTimeline({ project, onUpdate }) {
                   </td>
                   {dates.map((date, dateIdx) => {
                     const cellColor = getCellColor(stage, date);
+                    const dateStr = format(date, 'yyyy-MM-dd');
+                    const key = `${stageIdx}-${dateStr}`;
+                    const hasE = extraDayMarkers[key];
+                    
                     return (
                       <td
                         key={dateIdx}
-                        className={`border border-slate-200 p-0 ${cellColor}`}
+                        onClick={() => handleAddExtraDay(stageIdx, date)}
+                        className={`border border-slate-200 p-0 cursor-pointer hover:ring-2 hover:ring-blue-400 ${cellColor}`}
                         style={{ minWidth: '30px', height: '40px' }}
-                      />
+                        title="Click to add/remove extra day (E)"
+                      >
+                        {hasE && (
+                          <div className="flex items-center justify-center h-full font-bold text-red-700 text-xs">
+                            E
+                          </div>
+                        )}
+                      </td>
                     );
                   })}
                 </tr>
