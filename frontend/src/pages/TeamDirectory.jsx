@@ -55,6 +55,7 @@ export default function TeamDirectory({ user }) {
         members: [{
           employeeId: newMember.employeeId,
           name: newMember.name,
+          shortName: newMember.shortName || null,
           role: newMember.role,
           department: newMember.department,
           pod: newMember.pod || null
@@ -62,12 +63,26 @@ export default function TeamDirectory({ user }) {
       });
       
       toast.success(`${newMember.name} added to team!`);
-      setNewMember({ employeeId: '', name: '', role: '', department: '', pod: '' });
+      setNewMember({ employeeId: '', name: '', shortName: '', role: '', department: '', pod: '' });
       setDialogOpen(false);
       fetchTeam();
     } catch (error) {
       console.error('Error:', error);
       toast.error('Failed to add team member');
+    }
+  };
+
+  const handleUpdateShortName = async (memberId) => {
+    try {
+      await axios.patch(`${API}/team-members/${memberId}`, {
+        shortName: tempShortName
+      });
+      toast.success('Short name updated!');
+      setEditingShortName(null);
+      fetchTeam();
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to update');
     }
   };
 
