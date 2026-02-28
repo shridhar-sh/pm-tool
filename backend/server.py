@@ -78,6 +78,7 @@ class TeamMember(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     employeeId: str
     name: str
+    shortName: Optional[str] = None
     role: str
     department: str
     pod: Optional[str] = None
