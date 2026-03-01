@@ -237,12 +237,13 @@ export default function ProjectTimeline({ project, onUpdate }) {
   };
 
   // Handle clicking on a timeline cell to add/remove "E" marker or "W" marker
-  const handleCellClick = (date) => {
+  const handleCellClick = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
+    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key
     const isWeekendDay = isWeekend(date);
     const holidayInfo = getHolidayInfo(date);
     
-    // For weekends or holidays - toggle working status (W marker)
+    // For weekends or holidays - toggle working status (W marker) - applies to entire column
     if (isWeekendDay || holidayInfo) {
       const newWorkingDays = { ...workingDays };
       if (newWorkingDays[dateStr]) {
@@ -260,13 +261,13 @@ export default function ProjectTimeline({ project, onUpdate }) {
       return;
     }
     
-    // For regular days, toggle E marker
+    // For regular days, toggle E marker - cell specific
     const newMarkers = { ...extraDayMarkers };
-    if (newMarkers[dateStr]) {
-      delete newMarkers[dateStr];
+    if (newMarkers[cellKey]) {
+      delete newMarkers[cellKey];
       toast.info('Extra day removed - dates recalculated');
     } else {
-      newMarkers[dateStr] = true;
+      newMarkers[cellKey] = true;
       toast.success('Extra day added (E) - dates pushed forward');
     }
     setExtraDayMarkers(newMarkers);
