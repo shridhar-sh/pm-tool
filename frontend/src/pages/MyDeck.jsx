@@ -253,7 +253,7 @@ export default function MyDeck({ user }) {
             <CardTitle>Quick Add - Enter Project Details</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label>Brand Name *</Label>
                 <Input
@@ -273,17 +273,8 @@ export default function MyDeck({ user }) {
                 />
               </div>
               <div>
-                <Label>CS (Creative Strategist) *</Label>
-                <Input
-                  value={quickAdd.csDoneBy}
-                  onChange={(e) => setQuickAdd({ ...quickAdd, csDoneBy: e.target.value })}
-                  placeholder="Deep"
-                  data-testid="quick-add-cs"
-                />
-              </div>
-              <div>
                 <Label>POD</Label>
-                <Select value={quickAdd.pod} onValueChange={(value) => setQuickAdd({ ...quickAdd, pod: value })}>
+                <Select value={quickAdd.pod} onValueChange={(value) => setQuickAdd({ ...quickAdd, pod: value, csDoneBy: '' })}>
                   <SelectTrigger data-testid="quick-add-pod">
                     <SelectValue />
                   </SelectTrigger>
@@ -291,6 +282,36 @@ export default function MyDeck({ user }) {
                     <SelectItem value="POD 1">POD 1</SelectItem>
                     <SelectItem value="POD 2">POD 2</SelectItem>
                     <SelectItem value="POD 3">POD 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>CS (Creative Strategist) *</Label>
+                <Select value={quickAdd.csDoneBy} onValueChange={(value) => setQuickAdd({ ...quickAdd, csDoneBy: value })}>
+                  <SelectTrigger data-testid="quick-add-cs">
+                    <SelectValue placeholder="Select CS" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getCreativeStrategists(quickAdd.pod).map(cs => (
+                      <SelectItem key={cs.id} value={cs.shortName || cs.name}>
+                        {cs.shortName || cs.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Account Manager</Label>
+                <Select value={quickAdd.assignedAM} onValueChange={(value) => setQuickAdd({ ...quickAdd, assignedAM: value })}>
+                  <SelectTrigger data-testid="quick-add-am">
+                    <SelectValue placeholder="Select AM" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAccountManagers().map(am => (
+                      <SelectItem key={am.id} value={am.shortName || am.name}>
+                        {am.shortName || am.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
