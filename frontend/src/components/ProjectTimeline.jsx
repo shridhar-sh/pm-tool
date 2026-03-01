@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, parseISO, addDays, eachDayOfInterval, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, parseISO, addDays, eachDayOfInterval, startOfMonth, endOfMonth, isWithinInterval, getDay, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Download, Info } from 'lucide-react';
 import { toast } from 'sonner';
+import axios from 'axios';
 import {
   Tooltip,
   TooltipContent,
@@ -13,20 +14,101 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
 export default function ProjectTimeline({ project, onUpdate }) {
   const [stages, setStages] = useState([]);
   const [dates, setDates] = useState([]);
-  const [extraDayMarkers, setExtraDayMarkers] = useState({});
+  const [extraDayMarkers, setExtraDayMarkers] = useState({}); // { 'YYYY-MM-DD': true }
+  const [holidays, setHolidays] = useState([]);
+  const [workingWeekends, setWorkingWeekends] = useState({}); // { 'YYYY-MM-DD': true } for weekends marked as working
+
+  // Fetch holidays on mount
+  useEffect(() => {
+    const fetchHolidays = async () => {
+      try {
+        const response = await axios.get(`${API}/holidays`);
+        setHolidays(response.data);
+      } catch (err) {
+        console.error('Error fetching holidays:', err);
+      }
+    };
+    fetchHolidays();
+  }, []);
+
+  // Check if a date is a holiday
+  const isHoliday = useCallback((date) => {
+    const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
+    const holiday = holidays.find(h => h.date === dateStr);
+    return holiday && !holiday.isWorking;
+  }, [holidays]);
+
+  // Check if a date is a weekend (Sat=6, Sun=0)
+  const isWeekend = useCallback((date) => {
+    const d = typeof date === 'string' ? parseISO(date) : date;
+    const day = getDay(d);
+    return day === 0 || day === 6;
+  }, []);
+
+  // Check if a date is a non-working day (weekend or holiday, unless marked as working)
+  const isNonWorkingDay = useCallback((date) => {
+    const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
+    
+    // If marked as working weekend, it's a working day
+    if (workingWeekends[dateStr]) return false;
+    
+    // Check if it's a holiday (that's not marked as working)
+    if (isHoliday(date)) return true;
+    
+    // Check if it's a weekend
+    if (isWeekend(date)) return true;
+    
+    return false;
+  }, [isHoliday, isWeekend, workingWeekends]);
+
+  // Get the next working day from a given date
+  const getNextWorkingDay = useCallback((date) => {
+    let current = typeof date === 'string' ? parseISO(date) : date;
+    while (isNonWorkingDay(current)) {
+      current = addDays(current, 1);
+    }
+    return current;
+  }, [isNonWorkingDay]);
+
+  // Add working days to a date (skipping non-working days)
+  const addWorkingDays = useCallback((startDate, days) => {
+    if (days <= 0) return startDate;
+    
+    let current = typeof startDate === 'string' ? parseISO(startDate) : startDate;
+    let daysAdded = 0;
+    
+    // Start date should be a working day
+    current = getNextWorkingDay(current);
+    
+    // First day counts as day 1
+    daysAdded = 1;
+    
+    while (daysAdded < days) {
+      current = addDays(current, 1);
+      if (!isNonWorkingDay(current)) {
+        daysAdded++;
+      }
+    }
+    
+    return current;
+  }, [isNonWorkingDay, getNextWorkingDay]);
 
   // Calculate timeline dates for the header
   const calculateTimelineDates = useCallback(() => {
-    if (!project?.projectStartDate || !project?.projectEndDate) return;
+    if (!project?.projectStartDate) return;
     
     try {
       const start = parseISO(project.projectStartDate);
-      const end = parseISO(project.projectEndDate);
+      // Calculate end based on stages or add 60 days
+      const projectEnd = project.projectEndDate ? parseISO(project.projectEndDate) : addDays(start, 60);
       const monthStart = startOfMonth(start);
-      const monthEnd = endOfMonth(end);
+      const monthEnd = endOfMonth(projectEnd);
       const allDates = eachDayOfInterval({ start: monthStart, end: monthEnd });
       setDates(allDates);
     } catch (err) {
@@ -34,28 +116,75 @@ export default function ProjectTimeline({ project, onUpdate }) {
     }
   }, [project?.projectStartDate, project?.projectEndDate]);
 
-  // Auto-calculate stage dates based on duration and extra days
-  const autoCalculateStageDates = useCallback((workflowStages) => {
+  // Find which stage a date belongs to based on the E marker logic
+  // E marker on a date adds to:
+  // 1. The stage whose range contains that date
+  // 2. OR the previous stage if the date is the day after that stage's end date
+  const findStageForExtraDay = useCallback((dateStr, currentStages) => {
+    const targetDate = parseISO(dateStr);
+    
+    for (let i = 0; i < currentStages.length; i++) {
+      const stage = currentStages[i];
+      if (!stage.startDate || !stage.endDate) continue;
+      
+      const stageStart = parseISO(stage.startDate);
+      const stageEnd = parseISO(stage.endDate);
+      const dayAfterEnd = addDays(stageEnd, 1);
+      
+      // Check if date is within stage range
+      if (isWithinInterval(targetDate, { start: stageStart, end: stageEnd })) {
+        return i;
+      }
+      
+      // Check if date is the day after stage end (pushes this stage)
+      if (isSameDay(targetDate, dayAfterEnd)) {
+        return i;
+      }
+    }
+    
+    // If no stage found, find the closest previous stage
+    for (let i = currentStages.length - 1; i >= 0; i--) {
+      const stage = currentStages[i];
+      if (stage.endDate && parseISO(stage.endDate) < targetDate) {
+        return i;
+      }
+    }
+    
+    return -1;
+  }, []);
+
+  // Auto-calculate stage dates based on duration, extra days, and non-working days
+  const autoCalculateStageDates = useCallback((workflowStages, extraMarkers = {}) => {
     if (!project?.projectStartDate || !workflowStages?.length) return workflowStages;
     
     try {
-      const updatedStages = [...workflowStages];
-      let currentDate = parseISO(project.projectStartDate);
+      const updatedStages = workflowStages.map(s => ({ ...s, extraDays: 0 }));
+      
+      // First pass: count extra day markers for each stage
+      Object.keys(extraMarkers).forEach(dateStr => {
+        const stageIdx = findStageForExtraDay(dateStr, updatedStages);
+        if (stageIdx >= 0) {
+          updatedStages[stageIdx].extraDays = (updatedStages[stageIdx].extraDays || 0) + 1;
+        }
+      });
+      
+      // Second pass: calculate dates
+      let currentDate = getNextWorkingDay(parseISO(project.projectStartDate));
       
       updatedStages.forEach((stage) => {
         stage.startDate = format(currentDate, 'yyyy-MM-dd');
         
         const duration = parseInt(stage.duration) || 0;
         const extraDays = parseInt(stage.extraDays) || 0;
+        const totalDays = duration + extraDays;
         
-        if (duration > 0) {
-          const totalDays = duration + extraDays;
-          const endDate = addDays(currentDate, totalDays - 1);
+        if (totalDays > 0) {
+          const endDate = addWorkingDays(currentDate, totalDays);
           stage.endDate = format(endDate, 'yyyy-MM-dd');
-          currentDate = addDays(endDate, 1); // Next stage starts day after
+          // Next stage starts the next working day after this stage ends
+          currentDate = getNextWorkingDay(addDays(endDate, 1));
         } else {
           stage.endDate = null;
-          // If no duration set, next stage still starts from same date
         }
       });
       
@@ -64,16 +193,16 @@ export default function ProjectTimeline({ project, onUpdate }) {
       console.error('Error auto-calculating dates:', err);
       return workflowStages;
     }
-  }, [project?.projectStartDate]);
+  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays]);
 
   // Initialize stages when project changes
   useEffect(() => {
     if (project?.workflowStages) {
-      const calculatedStages = autoCalculateStageDates(project.workflowStages);
+      const calculatedStages = autoCalculateStageDates(project.workflowStages, extraDayMarkers);
       setStages(calculatedStages);
     }
     calculateTimelineDates();
-  }, [project, autoCalculateStageDates, calculateTimelineDates]);
+  }, [project, autoCalculateStageDates, calculateTimelineDates, extraDayMarkers]);
 
   // Handle stage field updates
   const handleStageUpdate = (stageIndex, field, value) => {
@@ -81,57 +210,77 @@ export default function ProjectTimeline({ project, onUpdate }) {
     
     if (field === 'duration') {
       updatedStages[stageIndex].duration = parseInt(value) || 0;
-    } else if (field === 'extraDays') {
-      updatedStages[stageIndex].extraDays = parseInt(value) || 0;
     } else {
       updatedStages[stageIndex][field] = value;
     }
     
-    // Recalculate all dates when duration or extraDays changes
-    if (field === 'duration' || field === 'extraDays') {
-      const recalculatedStages = autoCalculateStageDates(updatedStages);
+    // Recalculate all dates when duration changes
+    if (field === 'duration') {
+      const recalculatedStages = autoCalculateStageDates(updatedStages, extraDayMarkers);
       setStages(recalculatedStages);
+      
+      // Calculate project end date from last stage
+      const lastStage = recalculatedStages[recalculatedStages.length - 1];
+      const projectEndDate = lastStage?.endDate || project.projectEndDate;
+      
       if (onUpdate) {
-        onUpdate({ workflowStages: recalculatedStages });
+        onUpdate({ 
+          workflowStages: recalculatedStages,
+          projectEndDate: projectEndDate
+        });
       }
     } else {
       setStages(updatedStages);
-      if (onUpdate) {
-        onUpdate({ workflowStages: updatedStages });
-      }
     }
   };
 
-  // Handle clicking on a timeline cell to add/remove "E" marker
-  const handleAddExtraDay = (stageIndex, date) => {
+  // Handle clicking on a timeline cell to add/remove "E" marker (date-based)
+  const handleCellClick = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const key = `${stageIndex}-${dateStr}`;
     
+    // Check if it's a weekend - toggle working status
+    if (isWeekend(date) && !isHoliday(date)) {
+      const newWorkingWeekends = { ...workingWeekends };
+      if (newWorkingWeekends[dateStr]) {
+        delete newWorkingWeekends[dateStr];
+        toast.info('Weekend marked as non-working');
+      } else {
+        newWorkingWeekends[dateStr] = true;
+        toast.success('Weekend marked as working (C)');
+      }
+      setWorkingWeekends(newWorkingWeekends);
+      
+      // Recalculate stages
+      const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers);
+      setStages(recalculatedStages);
+      return;
+    }
+    
+    // For regular days, toggle E marker
     const newMarkers = { ...extraDayMarkers };
-    if (newMarkers[key]) {
-      delete newMarkers[key];
+    if (newMarkers[dateStr]) {
+      delete newMarkers[dateStr];
+      toast.info('Extra day removed - dates recalculated');
     } else {
-      newMarkers[key] = true;
+      newMarkers[dateStr] = true;
+      toast.success('Extra day added (E) - dates pushed forward');
     }
     setExtraDayMarkers(newMarkers);
     
-    // Count markers for this stage and update extraDays
-    const stageMarkerCount = Object.keys(newMarkers)
-      .filter(k => k.startsWith(`${stageIndex}-`))
-      .length;
-    
-    const updatedStages = [...stages];
-    updatedStages[stageIndex].extraDays = stageMarkerCount;
-    
-    // Recalculate all dates
-    const recalculatedStages = autoCalculateStageDates(updatedStages);
+    // Recalculate stages with new markers
+    const recalculatedStages = autoCalculateStageDates(stages, newMarkers);
     setStages(recalculatedStages);
     
-    if (onUpdate) {
-      onUpdate({ workflowStages: recalculatedStages });
-    }
+    // Calculate project end date from last stage
+    const lastStage = recalculatedStages[recalculatedStages.length - 1];
+    const projectEndDate = lastStage?.endDate || project.projectEndDate;
     
-    toast.success(newMarkers[key] ? 'Extra day added - dates recalculated' : 'Extra day removed - dates recalculated');
+    if (onUpdate) {
+      onUpdate({ 
+        workflowStages: recalculatedStages,
+        projectEndDate: projectEndDate
+      });
+    }
   };
 
   // Check if a date falls within a stage's range
@@ -147,29 +296,43 @@ export default function ProjectTimeline({ project, onUpdate }) {
     }
   };
 
-  // Get cell color based on stage type and completion
-  const getCellColor = (stage, date, stageIdx) => {
-    if (!stage.startDate || !stage.endDate) return '';
-    
+  // Get cell styling
+  const getCellStyle = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const markerKey = `${stageIdx}-${dateStr}`;
+    const stage = stages[stageIdx];
+    const isInRange = isDateInStageRange(date, stage);
+    const hasEMarker = extraDayMarkers[dateStr];
+    const isWeekendDay = isWeekend(date);
+    const isHolidayDay = isHoliday(date);
+    const isWorkingWeekend = workingWeekends[dateStr];
     
-    // "E" marker cells - red
-    if (extraDayMarkers[markerKey]) {
-      return 'bg-red-300';
+    let bgColor = '';
+    let textContent = '';
+    
+    // E marker takes precedence
+    if (hasEMarker) {
+      bgColor = 'bg-red-300';
+      textContent = 'E';
     }
-    
-    // Check if date is in stage range
-    if (isDateInStageRange(date, stage)) {
-      // SS (ScrollStop) tasks - blue
+    // Working weekend (C marker)
+    else if (isWeekendDay && isWorkingWeekend && isInRange) {
+      bgColor = stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
+      textContent = 'C';
+    }
+    // Non-working days
+    else if (isWeekendDay || isHolidayDay) {
+      bgColor = 'bg-slate-200';
+    }
+    // In stage range
+    else if (isInRange) {
       if (stage.taskType === 'SS') {
-        return stage.completed ? 'bg-blue-400' : 'bg-blue-100';
+        bgColor = stage.completed ? 'bg-blue-400' : 'bg-blue-100';
+      } else {
+        bgColor = stage.completed ? 'bg-yellow-400' : 'bg-yellow-100';
       }
-      // C (Client) tasks - yellow
-      return stage.completed ? 'bg-yellow-400' : 'bg-yellow-100';
     }
     
-    return '';
+    return { bgColor, textContent };
   };
 
   // Get department badge color
@@ -182,6 +345,18 @@ export default function ProjectTimeline({ project, onUpdate }) {
     };
     return colors[dept] || 'bg-slate-100 text-slate-700 border-slate-300';
   };
+
+  // Get holiday name for a date
+  const getHolidayName = (date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const holiday = holidays.find(h => h.date === dateStr);
+    return holiday?.name || null;
+  };
+
+  // Calculate project end date from last stage
+  const calculatedEndDate = stages.length > 0 
+    ? stages[stages.length - 1]?.endDate 
+    : project?.projectEndDate;
 
   if (!project) {
     return (
@@ -206,16 +381,19 @@ export default function ProjectTimeline({ project, onUpdate }) {
             </div>
             <div className="flex items-center gap-3">
               <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs">SS = ScrollStop</Badge>
-              <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">C = Client</Badge>
+              <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">C = Client/Working</Badge>
+              <Badge className="bg-red-100 text-red-700 border-red-300 text-xs">E = Extra Day</Badge>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="ghost">
                     <Info className="w-4 h-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>Click on any cell to add an "E" (Extra Day).</p>
-                  <p>This will push all subsequent dates forward.</p>
+                <TooltipContent className="max-w-xs">
+                  <p className="font-semibold mb-1">How to use:</p>
+                  <p>• Click any date to add "E" (Extra Day) - pushes all dates forward</p>
+                  <p>• Click weekend to mark as "C" (Working day)</p>
+                  <p>• Weekends & holidays are auto-skipped</p>
                 </TooltipContent>
               </Tooltip>
               <Button size="sm" variant="outline" data-testid="export-timeline-btn">
@@ -231,7 +409,8 @@ export default function ProjectTimeline({ project, onUpdate }) {
             </div>
             <div>
               <span className="text-slate-500">End:</span>
-              <span className="font-semibold ml-2">{project.projectEndDate}</span>
+              <span className="font-semibold ml-2 text-green-600">{calculatedEndDate || '-'}</span>
+              <span className="text-xs text-slate-400 ml-1">(auto-calculated)</span>
             </div>
             <div>
               <span className="text-slate-500">POD:</span>
@@ -257,14 +436,27 @@ export default function ProjectTimeline({ project, onUpdate }) {
                   <th className="border border-slate-200 p-2 min-w-[70px] text-center text-red-600">+Extra</th>
                   <th className="border border-slate-200 p-2 min-w-[100px] text-center bg-slate-100">Start</th>
                   <th className="border border-slate-200 p-2 min-w-[100px] text-center bg-slate-100">End</th>
-                  {dates.map((date, idx) => (
-                    <th key={idx} className="border border-slate-200 p-1 min-w-[30px] text-center text-xs">
-                      <div className="text-[10px] leading-tight">
-                        <div>{format(date, 'dd')}</div>
-                        <div className="text-slate-400">{format(date, 'MMM')}</div>
-                      </div>
-                    </th>
-                  ))}
+                  {dates.map((date, idx) => {
+                    const isWeekendDay = isWeekend(date);
+                    const holidayName = getHolidayName(date);
+                    return (
+                      <Tooltip key={idx}>
+                        <TooltipTrigger asChild>
+                          <th className={`border border-slate-200 p-1 min-w-[30px] text-center text-xs ${isWeekendDay ? 'bg-slate-200' : holidayName ? 'bg-red-100' : ''}`}>
+                            <div className="text-[10px] leading-tight">
+                              <div>{format(date, 'dd')}</div>
+                              <div className="text-slate-400">{format(date, 'MMM')}</div>
+                            </div>
+                          </th>
+                        </TooltipTrigger>
+                        {(isWeekendDay || holidayName) && (
+                          <TooltipContent>
+                            {holidayName || (isWeekendDay ? format(date, 'EEEE') : '')}
+                          </TooltipContent>
+                        )}
+                      </Tooltip>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
@@ -305,26 +497,33 @@ export default function ProjectTimeline({ project, onUpdate }) {
                       {stage.endDate || '-'}
                     </td>
                     {dates.map((date, dateIdx) => {
-                      const cellColor = getCellColor(stage, date, stageIdx);
-                      const dateStr = format(date, 'yyyy-MM-dd');
-                      const markerKey = `${stageIdx}-${dateStr}`;
-                      const hasE = extraDayMarkers[markerKey];
+                      const { bgColor, textContent } = getCellStyle(date, stageIdx);
+                      const holidayName = getHolidayName(date);
+                      const isWeekendDay = isWeekend(date);
                       
                       return (
-                        <td
-                          key={dateIdx}
-                          onClick={() => handleAddExtraDay(stageIdx, date)}
-                          className={`border border-slate-200 p-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${cellColor}`}
-                          style={{ minWidth: '30px', height: '36px' }}
-                          title={`Click to ${hasE ? 'remove' : 'add'} extra day`}
-                          data-testid={`cell-${stageIdx}-${dateIdx}`}
-                        >
-                          {hasE && (
-                            <div className="flex items-center justify-center h-full font-bold text-red-700 text-xs">
-                              E
-                            </div>
+                        <Tooltip key={dateIdx}>
+                          <TooltipTrigger asChild>
+                            <td
+                              onClick={() => handleCellClick(date)}
+                              className={`border border-slate-200 p-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${bgColor}`}
+                              style={{ minWidth: '30px', height: '36px' }}
+                              data-testid={`cell-${stageIdx}-${dateIdx}`}
+                            >
+                              {textContent && (
+                                <div className={`flex items-center justify-center h-full font-bold text-xs ${textContent === 'E' ? 'text-red-700' : 'text-slate-700'}`}>
+                                  {textContent}
+                                </div>
+                              )}
+                            </td>
+                          </TooltipTrigger>
+                          {(holidayName || isWeekendDay) && (
+                            <TooltipContent>
+                              <p>{holidayName || format(date, 'EEEE')}</p>
+                              <p className="text-xs text-slate-400">Click to mark as working</p>
+                            </TooltipContent>
                           )}
-                        </td>
+                        </Tooltip>
                       );
                     })}
                   </tr>
@@ -335,26 +534,26 @@ export default function ProjectTimeline({ project, onUpdate }) {
           
           {/* Legend */}
           <div className="p-4 border-t border-slate-200 bg-slate-50">
-            <div className="flex items-center gap-6 text-xs">
+            <div className="flex flex-wrap items-center gap-6 text-xs">
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-                <span>SS Task (Pending)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-400 border border-blue-500 rounded"></div>
-                <span>SS Task (Done)</span>
+                <span>SS Task</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-                <span>Client Task (Pending)</span>
+                <span>Client Task</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-yellow-400 border border-yellow-500 rounded"></div>
-                <span>Client Task (Done)</span>
+                <div className="w-4 h-4 bg-slate-200 border border-slate-300 rounded"></div>
+                <span>Weekend/Holiday (skipped)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-300 border border-red-400 rounded flex items-center justify-center text-[8px] font-bold text-red-700">E</div>
-                <span>Extra Day (Click to toggle)</span>
+                <span>Extra Day (click to add)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-blue-200 border border-blue-400 rounded flex items-center justify-center text-[8px] font-bold">C</div>
+                <span>Working Weekend (click to toggle)</span>
               </div>
             </div>
           </div>
