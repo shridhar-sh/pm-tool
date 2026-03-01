@@ -222,15 +222,15 @@ export default function Dashboard({ user }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Line Producer</Label>
-                <Select value={newProject.assignedLP} onValueChange={(value) => setNewProject({ ...newProject, assignedLP: value })}>
-                  <SelectTrigger data-testid="lp-select">
-                    <SelectValue placeholder="Select Line Producer" />
+                <Label>Account Manager</Label>
+                <Select value={newProject.assignedAM} onValueChange={(value) => setNewProject({ ...newProject, assignedAM: value })}>
+                  <SelectTrigger data-testid="am-select">
+                    <SelectValue placeholder="Select Account Manager" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getLineProducers().map(lp => (
-                      <SelectItem key={lp.id} value={lp.shortName || lp.name}>
-                        {lp.shortName || lp.name}
+                    {getAccountManagers().map(am => (
+                      <SelectItem key={am.id} value={am.shortName || am.name}>
+                        {am.shortName || am.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
