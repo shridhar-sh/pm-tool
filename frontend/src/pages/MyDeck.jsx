@@ -349,23 +349,24 @@ export default function MyDeck({ user }) {
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 bg-slate-800 text-white z-10">
               <tr>
-                <th className="border border-slate-300 p-2 text-left min-w-[200px]">Project Name</th>
-                <th className="border border-slate-300 p-2 text-left min-w-[200px]">SOW</th>
-                <th className="border border-slate-300 p-2 text-left min-w-[120px]">CS done by</th>
-                <th className="border border-slate-300 p-2 text-center min-w-[80px] bg-red-600">no of ext days</th>
-                <th className="border border-slate-300 p-2 text-left min-w-[150px]">Status</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[200px] font-semibold">Project Name</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[200px] font-semibold">SOW</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[100px] font-semibold">CS</th>
+                <th className="border border-slate-600 p-3 text-center min-w-[80px] bg-red-600 font-semibold">Ext Days</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[120px] font-semibold">Status</th>
                 {stages.map((stage, idx) => {
                   const prevDept = idx > 0 ? stages[idx - 1].department : null;
                   const isNewDept = stage.department !== prevDept;
                   return (
                     <th 
                       key={idx} 
-                      className={`border border-slate-300 p-2 min-w-[50px] text-center ${
-                        isNewDept ? 'border-l-4 border-l-slate-900' : ''
+                      className={`border border-slate-600 p-2 min-w-[40px] text-center font-medium ${
+                        isNewDept ? 'border-l-4 border-l-white' : ''
                       }`}
+                      title={stage.name}
                     >
-                      <div className="transform -rotate-45 origin-center whitespace-nowrap text-xs">
-                        {stage.name}
+                      <div className="text-[10px] leading-tight whitespace-nowrap">
+                        {stage.name.length > 8 ? stage.name.substring(0, 8) + '..' : stage.name}
                       </div>
                     </th>
                   );
@@ -373,8 +374,14 @@ export default function MyDeck({ user }) {
               </tr>
             </thead>
             <tbody>
-              {Object.entries(groupedProjects).map(([pod, statusGroups]) => (
+              {Object.entries(groupedProjects).map(([pod, statusGroups], podIndex) => (
                 <React.Fragment key={pod}>
+                  {/* White gap before POD (except first) */}
+                  {podIndex > 0 && (
+                    <tr>
+                      <td colSpan={5 + stages.length} className="bg-white h-6"></td>
+                    </tr>
+                  )}
                   <tr className="bg-slate-800 text-white">
                     <td colSpan={5 + stages.length} className="p-3 font-bold text-lg">
                       {pod}
