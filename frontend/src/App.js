@@ -175,6 +175,20 @@ function App() {
             }
           />
           
+          {/* Holiday Management - PM only */}
+          <Route
+            path="/holidays"
+            element={
+              <ProtectedRoute 
+                user={user} 
+                allowedRoles={[ROLES.PM]} 
+                onLogout={handleLogout}
+              >
+                <HolidayManagement user={user} />
+              </ProtectedRoute>
+            }
+          />
+          
           {/* Project Detail - All roles can view their assigned projects */}
           <Route
             path="/project/:id"
