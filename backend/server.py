@@ -280,6 +280,94 @@ async def delete_team_member(member_id: str):
     return {"message": "Team member deleted"}
 
 
+# ============== HOLIDAYS API ==============
+
+@api_router.get("/holidays")
+async def get_holidays():
+    holidays = await db.holidays.find({}, {"_id": 0}).to_list(1000)
+    return holidays
+
+
+@api_router.post("/holidays")
+async def create_holiday(holiday: HolidayCreate):
+    # Calculate day of week if not provided
+    from datetime import datetime as dt
+    date_obj = dt.strptime(holiday.date, "%Y-%m-%d")
+    day_of_week = holiday.dayOfWeek or date_obj.strftime("%a")
+    
+    new_holiday = {
+        "id": str(uuid.uuid4()),
+        "date": holiday.date,
+        "name": holiday.name,
+        "dayOfWeek": day_of_week,
+        "isWorking": False
+    }
+    await db.holidays.insert_one(new_holiday)
+    return {k: v for k, v in new_holiday.items() if k != "_id"}
+
+
+@api_router.patch("/holidays/{holiday_id}")
+async def update_holiday(holiday_id: str, update_data: Dict):
+    result = await db.holidays.update_one(
+        {"id": holiday_id},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    holiday = await db.holidays.find_one({"id": holiday_id}, {"_id": 0})
+    return holiday
+
+
+@api_router.delete("/holidays/{holiday_id}")
+async def delete_holiday(holiday_id: str):
+    result = await db.holidays.delete_one({"id": holiday_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Holiday not found")
+    return {"message": "Holiday deleted"}
+
+
+@api_router.post("/holidays/seed")
+async def seed_holidays():
+    """Seed the database with 2026 holidays"""
+    holidays_2026 = [
+        {"date": "2026-01-01", "name": "New Year", "dayOfWeek": "Thu"},
+        {"date": "2026-01-02", "name": "Official Holidays", "dayOfWeek": "Fri"},
+        {"date": "2026-01-14", "name": "Sankranti/Pongal", "dayOfWeek": "Wed"},
+        {"date": "2026-01-26", "name": "Republic Day", "dayOfWeek": "Mon"},
+        {"date": "2026-02-15", "name": "Maha Shivaratri", "dayOfWeek": "Sun"},
+        {"date": "2026-03-03", "name": "Holi", "dayOfWeek": "Tue"},
+        {"date": "2026-03-19", "name": "Ugadi", "dayOfWeek": "Thu"},
+        {"date": "2026-03-20", "name": "Eid al-Fitr", "dayOfWeek": "Fri"},
+        {"date": "2026-05-01", "name": "May Day", "dayOfWeek": "Fri"},
+        {"date": "2026-08-15", "name": "Independence Day", "dayOfWeek": "Sat"},
+        {"date": "2026-09-14", "name": "Ganesh Chaturthi", "dayOfWeek": "Mon"},
+        {"date": "2026-10-02", "name": "Gandhi Jayanti", "dayOfWeek": "Fri"},
+        {"date": "2026-10-19", "name": "Vijaya Dashami", "dayOfWeek": "Mon"},
+        {"date": "2026-10-20", "name": "Vijaya Dashami", "dayOfWeek": "Tue"},
+        {"date": "2026-11-01", "name": "Kannada Rajyotsava", "dayOfWeek": "Sun"},
+        {"date": "2026-11-08", "name": "Diwali", "dayOfWeek": "Sun"},
+        {"date": "2026-11-09", "name": "Diwali", "dayOfWeek": "Mon"},
+        {"date": "2026-12-25", "name": "Christmas", "dayOfWeek": "Fri"}
+    ]
+    
+    # Clear existing and insert new
+    await db.holidays.delete_many({})
+    
+    holidays_to_insert = [
+        {
+            "id": str(uuid.uuid4()),
+            "date": h["date"],
+            "name": h["name"],
+            "dayOfWeek": h["dayOfWeek"],
+            "isWorking": False
+        }
+        for h in holidays_2026
+    ]
+    
+    await db.holidays.insert_many(holidays_to_insert)
+    return {"message": f"Seeded {len(holidays_to_insert)} holidays for 2026"}
+
+
 app.include_router(api_router)
 
 app.add_middleware(
