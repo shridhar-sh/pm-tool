@@ -533,7 +533,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
                         <Tooltip key={dateIdx}>
                           <TooltipTrigger asChild>
                             <td
-                              onClick={() => handleCellClick(date)}
+                              onClick={() => handleCellClick(date, stageIdx)}
                               className={`border border-slate-200 p-0 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all ${bgColor}`}
                               style={{ minWidth: '30px', height: '36px' }}
                               data-testid={`cell-${stageIdx}-${dateIdx}`}
