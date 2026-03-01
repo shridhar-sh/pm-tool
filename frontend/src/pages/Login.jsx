@@ -18,28 +18,28 @@ export default function Login({ onLogin }) {
         email: 'pm@agency.com',
         password: 'demo123',
         role: 'project_manager',
-        name: 'Sarah Johnson',
+        name: 'Shridhar Bahubali S',
         avatar: 'https://images.unsplash.com/photo-1731848358154-52ebc3c4d590?w=100&h=100&fit=crop'
       },
       {
         email: 'am@agency.com',
         password: 'demo123',
         role: 'account_manager',
-        name: 'Michael Chen',
+        name: 'Maya Mahadevan',
         avatar: 'https://images.unsplash.com/photo-1622676614630-a9109126264a?w=100&h=100&fit=crop'
       },
       {
         email: 'lp@agency.com',
         password: 'demo123',
         role: 'line_producer',
-        name: 'Emma Davis',
+        name: 'Mohammed Burhan',
         avatar: 'https://images.unsplash.com/photo-1758613655736-16757bdd953b?w=100&h=100&fit=crop'
       },
       {
         email: 'team@agency.com',
         password: 'demo123',
         role: 'team_member',
-        name: 'Alex Rivera',
+        name: 'Pradeep',
         avatar: 'https://images.unsplash.com/photo-1731848358154-52ebc3c4d590?w=100&h=100&fit=crop'
       }
     ];
