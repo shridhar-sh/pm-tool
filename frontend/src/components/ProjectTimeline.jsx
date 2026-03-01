@@ -246,21 +246,31 @@ export default function ProjectTimeline({ project, onUpdate }) {
   // Handle clicking on a timeline cell to add/remove "E" marker or "W" marker
   const handleCellClick = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key
+    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key for VISUAL only
     const isWeekendDay = isWeekend(date);
     const holidayInfo = getHolidayInfo(date);
     
-    // For weekends or holidays - toggle working status (W marker) - applies to entire column
+    // For weekends or holidays - toggle working status (W marker)
+    // EXECUTION: column-wide (date-based)
+    // VISUAL: cell-specific (only show W on clicked cell)
     if (isWeekendDay || holidayInfo) {
       const newWorkingDays = { ...workingDays };
+      const newWorkingDaysVisual = { ...workingDaysVisual };
+      
       if (newWorkingDays[dateStr]) {
         delete newWorkingDays[dateStr];
+        // Remove all visual markers for this date
+        Object.keys(newWorkingDaysVisual).forEach(key => {
+          if (key.endsWith(`-${dateStr}`)) delete newWorkingDaysVisual[key];
+        });
         toast.info(`${holidayInfo?.name || 'Weekend'} marked as non-working`);
       } else {
         newWorkingDays[dateStr] = true;
+        newWorkingDaysVisual[cellKey] = true; // Visual only on clicked cell
         toast.success(`${holidayInfo?.name || 'Weekend'} marked as Working (W)`);
       }
       setWorkingDays(newWorkingDays);
+      setWorkingDaysVisual(newWorkingDaysVisual);
       
       // Recalculate stages
       const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers);
@@ -268,16 +278,26 @@ export default function ProjectTimeline({ project, onUpdate }) {
       return;
     }
     
-    // For regular days, toggle E marker - cell specific
+    // For regular days, toggle E marker
+    // EXECUTION: date-based (affects stage based on date position)
+    // VISUAL: cell-specific (only show E on clicked cell)
     const newMarkers = { ...extraDayMarkers };
-    if (newMarkers[cellKey]) {
-      delete newMarkers[cellKey];
+    const newVisual = { ...extraDayVisual };
+    
+    if (newMarkers[dateStr]) {
+      delete newMarkers[dateStr];
+      // Remove visual marker for this date
+      Object.keys(newVisual).forEach(key => {
+        if (key.endsWith(`-${dateStr}`)) delete newVisual[key];
+      });
       toast.info('Extra day removed - dates recalculated');
     } else {
-      newMarkers[cellKey] = true;
+      newMarkers[dateStr] = true; // Execution: date-based
+      newVisual[cellKey] = true; // Visual: cell-specific
       toast.success('Extra day added (E) - dates pushed forward');
     }
     setExtraDayMarkers(newMarkers);
+    setExtraDayVisual(newVisual);
     
     // Recalculate stages with new markers
     const recalculatedStages = autoCalculateStageDates(stages, newMarkers);
