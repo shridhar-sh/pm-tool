@@ -31,7 +31,8 @@ export default function MyDeck({ user }) {
     projectStartDate: '',
     csDoneBy: '',
     pod: 'POD 1',
-    sow: ''
+    sow: '',
+    assignedAM: ''
   });
 
   useEffect(() => {
