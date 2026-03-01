@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { format, parseISO, addDays, eachDayOfInterval, startOfMonth, endOfMonth, isWithinInterval, getDay, isSameDay } from 'date-fns';
+import { format, parseISO, addDays, eachDayOfInterval, isWithinInterval, getDay, isSameDay } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
   const [dates, setDates] = useState([]);
   const [extraDayMarkers, setExtraDayMarkers] = useState({}); // { 'YYYY-MM-DD': true }
   const [holidays, setHolidays] = useState([]);
-  const [workingWeekends, setWorkingWeekends] = useState({}); // { 'YYYY-MM-DD': true } for weekends marked as working
+  const [workingDays, setWorkingDays] = useState({}); // { 'YYYY-MM-DD': true } for weekends/holidays marked as working
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -44,6 +44,12 @@ export default function ProjectTimeline({ project, onUpdate }) {
     return holiday && !holiday.isWorking;
   }, [holidays]);
 
+  // Get holiday info
+  const getHolidayInfo = useCallback((date) => {
+    const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
+    return holidays.find(h => h.date === dateStr);
+  }, [holidays]);
+
   // Check if a date is a weekend (Sat=6, Sun=0)
   const isWeekend = useCallback((date) => {
     const d = typeof date === 'string' ? parseISO(date) : date;
@@ -55,17 +61,17 @@ export default function ProjectTimeline({ project, onUpdate }) {
   const isNonWorkingDay = useCallback((date) => {
     const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
     
-    // If marked as working weekend, it's a working day
-    if (workingWeekends[dateStr]) return false;
+    // If manually marked as working, it's a working day
+    if (workingDays[dateStr]) return false;
     
-    // Check if it's a holiday (that's not marked as working)
+    // Check if it's a holiday (that's not marked as working in holiday settings)
     if (isHoliday(date)) return true;
     
     // Check if it's a weekend
     if (isWeekend(date)) return true;
     
     return false;
-  }, [isHoliday, isWeekend, workingWeekends]);
+  }, [isHoliday, isWeekend, workingDays]);
 
   // Get the next working day from a given date
   const getNextWorkingDay = useCallback((date) => {
@@ -99,7 +105,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
     return current;
   }, [isNonWorkingDay, getNextWorkingDay]);
 
-  // Calculate timeline dates for the header
+  // Calculate timeline dates for the header - START FROM PROJECT START DATE
   const calculateTimelineDates = useCallback(() => {
     if (!project?.projectStartDate) return;
     
@@ -107,9 +113,8 @@ export default function ProjectTimeline({ project, onUpdate }) {
       const start = parseISO(project.projectStartDate);
       // Calculate end based on stages or add 60 days
       const projectEnd = project.projectEndDate ? parseISO(project.projectEndDate) : addDays(start, 60);
-      const monthStart = startOfMonth(start);
-      const monthEnd = endOfMonth(projectEnd);
-      const allDates = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      // START FROM PROJECT START DATE, not month start
+      const allDates = eachDayOfInterval({ start: start, end: addDays(projectEnd, 14) });
       setDates(allDates);
     } catch (err) {
       console.error('Error calculating dates:', err);
@@ -117,9 +122,6 @@ export default function ProjectTimeline({ project, onUpdate }) {
   }, [project?.projectStartDate, project?.projectEndDate]);
 
   // Find which stage a date belongs to based on the E marker logic
-  // E marker on a date adds to:
-  // 1. The stage whose range contains that date
-  // 2. OR the previous stage if the date is the day after that stage's end date
   const findStageForExtraDay = useCallback((dateStr, currentStages) => {
     const targetDate = parseISO(dateStr);
     
@@ -221,7 +223,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
       
       // Calculate project end date from last stage
       const lastStage = recalculatedStages[recalculatedStages.length - 1];
-      const projectEndDate = lastStage?.endDate || project.projectEndDate;
+      const projectEndDate = lastStage?.endDate || lastStage?.startDate || project.projectEndDate;
       
       if (onUpdate) {
         onUpdate({ 
@@ -234,21 +236,23 @@ export default function ProjectTimeline({ project, onUpdate }) {
     }
   };
 
-  // Handle clicking on a timeline cell to add/remove "E" marker (date-based)
+  // Handle clicking on a timeline cell to add/remove "E" marker or "W" marker
   const handleCellClick = (date) => {
     const dateStr = format(date, 'yyyy-MM-dd');
+    const isWeekendDay = isWeekend(date);
+    const holidayInfo = getHolidayInfo(date);
     
-    // Check if it's a weekend - toggle working status
-    if (isWeekend(date) && !isHoliday(date)) {
-      const newWorkingWeekends = { ...workingWeekends };
-      if (newWorkingWeekends[dateStr]) {
-        delete newWorkingWeekends[dateStr];
-        toast.info('Weekend marked as non-working');
+    // For weekends or holidays - toggle working status (W marker)
+    if (isWeekendDay || holidayInfo) {
+      const newWorkingDays = { ...workingDays };
+      if (newWorkingDays[dateStr]) {
+        delete newWorkingDays[dateStr];
+        toast.info(`${holidayInfo?.name || 'Weekend'} marked as non-working`);
       } else {
-        newWorkingWeekends[dateStr] = true;
-        toast.success('Weekend marked as working (C)');
+        newWorkingDays[dateStr] = true;
+        toast.success(`${holidayInfo?.name || 'Weekend'} marked as Working (W)`);
       }
-      setWorkingWeekends(newWorkingWeekends);
+      setWorkingDays(newWorkingDays);
       
       // Recalculate stages
       const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers);
@@ -273,7 +277,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
     
     // Calculate project end date from last stage
     const lastStage = recalculatedStages[recalculatedStages.length - 1];
-    const projectEndDate = lastStage?.endDate || project.projectEndDate;
+    const projectEndDate = lastStage?.endDate || lastStage?.startDate || project.projectEndDate;
     
     if (onUpdate) {
       onUpdate({ 
@@ -296,34 +300,42 @@ export default function ProjectTimeline({ project, onUpdate }) {
     }
   };
 
-  // Get cell styling
+  // Get cell styling - E only shows on that specific cell
   const getCellStyle = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     const stage = stages[stageIdx];
     const isInRange = isDateInStageRange(date, stage);
     const hasEMarker = extraDayMarkers[dateStr];
     const isWeekendDay = isWeekend(date);
-    const isHolidayDay = isHoliday(date);
-    const isWorkingWeekend = workingWeekends[dateStr];
+    const holidayInfo = getHolidayInfo(date);
+    const isMarkedWorking = workingDays[dateStr];
     
     let bgColor = '';
     let textContent = '';
     
-    // E marker takes precedence
+    // E marker - only on that specific cell (red background)
     if (hasEMarker) {
       bgColor = 'bg-red-300';
       textContent = 'E';
     }
-    // Working weekend (C marker)
-    else if (isWeekendDay && isWorkingWeekend && isInRange) {
-      bgColor = stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
-      textContent = 'C';
+    // Holiday - orange background
+    else if (holidayInfo && !holidayInfo.isWorking && !isMarkedWorking) {
+      bgColor = 'bg-orange-200';
     }
-    // Non-working days
-    else if (isWeekendDay || isHolidayDay) {
+    // Weekend marked as working (W marker)
+    else if ((isWeekendDay || holidayInfo) && isMarkedWorking) {
+      if (isInRange) {
+        bgColor = stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
+      } else {
+        bgColor = 'bg-green-100';
+      }
+      textContent = 'W';
+    }
+    // Regular weekend - gray
+    else if (isWeekendDay) {
       bgColor = 'bg-slate-200';
     }
-    // In stage range
+    // In stage range - normal task color
     else if (isInRange) {
       if (stage.taskType === 'SS') {
         bgColor = stage.completed ? 'bg-blue-400' : 'bg-blue-100';
@@ -346,17 +358,14 @@ export default function ProjectTimeline({ project, onUpdate }) {
     return colors[dept] || 'bg-slate-100 text-slate-700 border-slate-300';
   };
 
-  // Get holiday name for a date
-  const getHolidayName = (date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const holiday = holidays.find(h => h.date === dateStr);
-    return holiday?.name || null;
+  // Calculate project end date from last stage (use start date if end date not available)
+  const getCalculatedEndDate = () => {
+    if (stages.length === 0) return project?.projectEndDate;
+    const lastStage = stages[stages.length - 1];
+    return lastStage?.endDate || lastStage?.startDate || project?.projectEndDate;
   };
 
-  // Calculate project end date from last stage
-  const calculatedEndDate = stages.length > 0 
-    ? stages[stages.length - 1]?.endDate 
-    : project?.projectEndDate;
+  const calculatedEndDate = getCalculatedEndDate();
 
   if (!project) {
     return (
@@ -381,8 +390,9 @@ export default function ProjectTimeline({ project, onUpdate }) {
             </div>
             <div className="flex items-center gap-3">
               <Badge className="bg-blue-100 text-blue-700 border-blue-300 text-xs">SS = ScrollStop</Badge>
-              <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">C = Client/Working</Badge>
+              <Badge className="bg-yellow-100 text-yellow-700 border-yellow-300 text-xs">C = Client</Badge>
               <Badge className="bg-red-100 text-red-700 border-red-300 text-xs">E = Extra Day</Badge>
+              <Badge className="bg-green-100 text-green-700 border-green-300 text-xs">W = Working</Badge>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button size="sm" variant="ghost">
@@ -391,9 +401,9 @@ export default function ProjectTimeline({ project, onUpdate }) {
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="font-semibold mb-1">How to use:</p>
-                  <p>• Click any date to add "E" (Extra Day) - pushes all dates forward</p>
-                  <p>• Click weekend to mark as "C" (Working day)</p>
-                  <p>• Weekends & holidays are auto-skipped</p>
+                  <p>• Click any working date to add "E" (Extra Day)</p>
+                  <p>• Click weekend/holiday to mark as "W" (Working)</p>
+                  <p>• Weekends (gray) & holidays (orange) are auto-skipped</p>
                 </TooltipContent>
               </Tooltip>
               <Button size="sm" variant="outline" data-testid="export-timeline-btn">
@@ -438,20 +448,30 @@ export default function ProjectTimeline({ project, onUpdate }) {
                   <th className="border border-slate-200 p-2 min-w-[100px] text-center bg-slate-100">End</th>
                   {dates.map((date, idx) => {
                     const isWeekendDay = isWeekend(date);
-                    const holidayName = getHolidayName(date);
+                    const holidayInfo = getHolidayInfo(date);
+                    const isMarkedWorking = workingDays[format(date, 'yyyy-MM-dd')];
+                    
+                    // Header cell colors
+                    let headerBg = '';
+                    if (holidayInfo && !holidayInfo.isWorking && !isMarkedWorking) {
+                      headerBg = 'bg-orange-200'; // Holiday - orange
+                    } else if (isWeekendDay && !isMarkedWorking) {
+                      headerBg = 'bg-slate-200'; // Weekend - gray
+                    }
+                    
                     return (
                       <Tooltip key={idx}>
                         <TooltipTrigger asChild>
-                          <th className={`border border-slate-200 p-1 min-w-[30px] text-center text-xs ${isWeekendDay ? 'bg-slate-200' : holidayName ? 'bg-red-100' : ''}`}>
+                          <th className={`border border-slate-200 p-1 min-w-[30px] text-center text-xs ${headerBg}`}>
                             <div className="text-[10px] leading-tight">
                               <div>{format(date, 'dd')}</div>
                               <div className="text-slate-400">{format(date, 'MMM')}</div>
                             </div>
                           </th>
                         </TooltipTrigger>
-                        {(isWeekendDay || holidayName) && (
+                        {(isWeekendDay || holidayInfo) && (
                           <TooltipContent>
-                            {holidayName || (isWeekendDay ? format(date, 'EEEE') : '')}
+                            {holidayInfo?.name || format(date, 'EEEE')}
                           </TooltipContent>
                         )}
                       </Tooltip>
@@ -498,7 +518,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
                     </td>
                     {dates.map((date, dateIdx) => {
                       const { bgColor, textContent } = getCellStyle(date, stageIdx);
-                      const holidayName = getHolidayName(date);
+                      const holidayInfo = getHolidayInfo(date);
                       const isWeekendDay = isWeekend(date);
                       
                       return (
@@ -511,16 +531,19 @@ export default function ProjectTimeline({ project, onUpdate }) {
                               data-testid={`cell-${stageIdx}-${dateIdx}`}
                             >
                               {textContent && (
-                                <div className={`flex items-center justify-center h-full font-bold text-xs ${textContent === 'E' ? 'text-red-700' : 'text-slate-700'}`}>
+                                <div className={`flex items-center justify-center h-full font-bold text-xs ${
+                                  textContent === 'E' ? 'text-red-700' : 
+                                  textContent === 'W' ? 'text-green-700' : 'text-slate-700'
+                                }`}>
                                   {textContent}
                                 </div>
                               )}
                             </td>
                           </TooltipTrigger>
-                          {(holidayName || isWeekendDay) && (
+                          {(holidayInfo || isWeekendDay) && (
                             <TooltipContent>
-                              <p>{holidayName || format(date, 'EEEE')}</p>
-                              <p className="text-xs text-slate-400">Click to mark as working</p>
+                              <p>{holidayInfo?.name || format(date, 'EEEE')}</p>
+                              <p className="text-xs text-slate-400">Click to mark as Working (W)</p>
                             </TooltipContent>
                           )}
                         </Tooltip>
@@ -541,19 +564,23 @@ export default function ProjectTimeline({ project, onUpdate }) {
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-yellow-100 border border-yellow-300 rounded"></div>
-                <span>Client Task</span>
+                <span>Client Task (C)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-slate-200 border border-slate-300 rounded"></div>
-                <span>Weekend/Holiday (skipped)</span>
+                <span>Weekend (skipped)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-orange-200 border border-orange-300 rounded"></div>
+                <span>Holiday (skipped)</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 bg-red-300 border border-red-400 rounded flex items-center justify-center text-[8px] font-bold text-red-700">E</div>
                 <span>Extra Day (click to add)</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-200 border border-blue-400 rounded flex items-center justify-center text-[8px] font-bold">C</div>
-                <span>Working Weekend (click to toggle)</span>
+                <div className="w-4 h-4 bg-green-100 border border-green-400 rounded flex items-center justify-center text-[8px] font-bold text-green-700">W</div>
+                <span>Working Day (click weekend/holiday)</span>
               </div>
             </div>
           </div>
