@@ -20,9 +20,9 @@ const API = `${BACKEND_URL}/api`;
 export default function ProjectTimeline({ project, onUpdate }) {
   const [stages, setStages] = useState([]);
   const [dates, setDates] = useState([]);
-  const [extraDayMarkers, setExtraDayMarkers] = useState({}); // { 'YYYY-MM-DD': true }
+  const [extraDayMarkers, setExtraDayMarkers] = useState({}); // { 'stageIdx-YYYY-MM-DD': true } - cell specific
   const [holidays, setHolidays] = useState([]);
-  const [workingDays, setWorkingDays] = useState({}); // { 'YYYY-MM-DD': true } for weekends/holidays marked as working
+  const [workingDays, setWorkingDays] = useState({}); // { 'YYYY-MM-DD': true } for weekends/holidays marked as working (column-wide)
 
   // Fetch holidays on mount
   useEffect(() => {
