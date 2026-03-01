@@ -163,9 +163,12 @@ export default function ProjectTimeline({ project, onUpdate }) {
       const updatedStages = workflowStages.map(s => ({ ...s, extraDays: 0 }));
       
       // First pass: count extra day markers for each stage
-      Object.keys(extraMarkers).forEach(dateStr => {
-        const stageIdx = findStageForExtraDay(dateStr, updatedStages);
-        if (stageIdx >= 0) {
+      // extraMarkers keys are now 'stageIdx-YYYY-MM-DD' format
+      Object.keys(extraMarkers).forEach(cellKey => {
+        // Extract stageIdx from cellKey (format: 'stageIdx-YYYY-MM-DD')
+        const parts = cellKey.split('-');
+        const stageIdx = parseInt(parts[0]);
+        if (stageIdx >= 0 && stageIdx < updatedStages.length) {
           updatedStages[stageIdx].extraDays = (updatedStages[stageIdx].extraDays || 0) + 1;
         }
       });
@@ -195,7 +198,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
       console.error('Error auto-calculating dates:', err);
       return workflowStages;
     }
-  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays]);
+  }, [project?.projectStartDate, getNextWorkingDay, addWorkingDays]);
 
   // Initialize stages when project changes
   useEffect(() => {
