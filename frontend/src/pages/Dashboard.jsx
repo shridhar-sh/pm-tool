@@ -28,7 +28,7 @@ export default function Dashboard({ user }) {
     csDoneBy: '',
     pod: 'POD 1',
     sow: '',
-    assignedLP: ''
+    assignedAM: ''
   });
 
   useEffect(() => {
