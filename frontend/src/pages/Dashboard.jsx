@@ -98,8 +98,8 @@ export default function Dashboard({ user }) {
     );
   };
 
-  const getLineProducers = () => {
-    return team.filter(t => t.role === 'Line Producer');
+  const getAccountManagers = () => {
+    return team.filter(t => t.role === 'Account Manager');
   };
 
   const stats = {
