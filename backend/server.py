@@ -22,9 +22,26 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
+# Holiday Model
+class Holiday(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date: str  # YYYY-MM-DD format
+    name: str
+    dayOfWeek: str
+    isWorking: bool = False  # If marked as working day (overrides holiday)
+
+
+class HolidayCreate(BaseModel):
+    date: str
+    name: str
+    dayOfWeek: Optional[str] = None
+
+
 class WorkflowStage(BaseModel):
     name: str
     taskType: str
+    department: Optional[str] = None
     startDate: Optional[str] = None
     endDate: Optional[str] = None
     duration: int = 0
