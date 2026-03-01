@@ -118,31 +118,23 @@ async def root():
 def create_default_workflow_stages():
     stages = [
         # Strategy Phase
-        {"name": "Onboarding Form", "taskType": "SS", "department": "strategy"},
         {"name": "Onboarding", "taskType": "SS", "department": "strategy"},
+        {"name": "Strategy", "taskType": "SS", "department": "strategy"},
+        {"name": "Strategy Approval", "taskType": "C", "department": "strategy"},
         {"name": "Products", "taskType": "C", "department": "strategy"},
-        {"name": "Research", "taskType": "SS", "department": "strategy"},
-        {"name": "Brainstorm Session", "taskType": "SS", "department": "strategy"},
         
         # Pre-Production Phase
-        {"name": "Scripts", "taskType": "SS", "department": "pre_production"},
-        {"name": "Scripts Approval", "taskType": "C", "department": "pre_production"},
-        {"name": "Model brief to LP", "taskType": "SS", "department": "pre_production"},
-        {"name": "Internal KT Production", "taskType": "SS", "department": "pre_production"},
-        {"name": "Storyboarding", "taskType": "SS", "department": "pre_production"},
+        {"name": "Pre Production", "taskType": "SS", "department": "pre_production"},
+        {"name": "PPM", "taskType": "C", "department": "pre_production"},
         
         # Production Phase
-        {"name": "Model list to client", "taskType": "C", "department": "production"},
-        {"name": "Model Approval", "taskType": "C", "department": "production"},
-        {"name": "PPM", "taskType": "C", "department": "production"},
         {"name": "Shoot", "taskType": "SS", "department": "production"},
         
         # Post-Production Phase
-        {"name": "Internal KT Post", "taskType": "SS", "department": "post_production"},
         {"name": "Edits", "taskType": "SS", "department": "post_production"},
         {"name": "Feedback", "taskType": "C", "department": "post_production"},
         {"name": "Revision", "taskType": "SS", "department": "post_production"},
-        {"name": "Project Closed", "taskType": "C", "department": "post_production"}
+        {"name": "Final Approval", "taskType": "C", "department": "post_production"}
     ]
     
     return [
