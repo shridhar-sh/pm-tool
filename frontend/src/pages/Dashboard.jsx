@@ -76,8 +76,7 @@ export default function Dashboard({ user }) {
         projectEndDate: endDate.toISOString().split('T')[0],
         statusCategory: 'yet_to_start',
         pod: newProject.pod,
-        assignedLP: newProject.assignedLP,
-        assignedAM: user.name,
+        assignedAM: newProject.assignedAM || user.name,
         createdBy: user.name
       });
 
