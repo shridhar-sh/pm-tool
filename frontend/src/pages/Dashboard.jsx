@@ -82,7 +82,7 @@ export default function Dashboard({ user }) {
       });
 
       toast.success(`✅ ${newProject.name} created!`);
-      setNewProject({ name: '', client: '', projectStartDate: '', csDoneBy: '', pod: 'POD 1', sow: '', assignedLP: '' });
+      setNewProject({ name: '', client: '', projectStartDate: '', csDoneBy: '', pod: 'POD 1', sow: '', assignedAM: '' });
       setDialogOpen(false);
       fetchProjects();
     } catch (error) {
