@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList, CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ function DashboardLayout({ user, onLogout, children }) {
       myTasks: { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
       projectManagement: { name: 'Project Management', icon: Calendar, path: '/project-management' },
       teamDirectory: { name: 'Team Directory', icon: Users, path: '/team-directory' },
+      holidays: { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
     };
 
     switch (role) {
@@ -29,6 +30,7 @@ function DashboardLayout({ user, onLogout, children }) {
           allNavItems.myTasks,
           allNavItems.projectManagement,
           allNavItems.teamDirectory,
+          allNavItems.holidays,
         ];
       case 'account_manager':
         // AM: Dashboard, AM Tracker, My Tasks
