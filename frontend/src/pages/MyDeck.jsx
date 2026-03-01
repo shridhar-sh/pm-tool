@@ -118,12 +118,13 @@ export default function MyDeck({ user }) {
         projectEndDate: endDate.toISOString().split('T')[0],
         statusCategory: 'yet_to_start',
         pod: quickAdd.pod,
+        assignedAM: quickAdd.assignedAM || user.name,
         createdBy: user.name
       });
 
       setProjects([response.data, ...projects]);
       toast.success(`✅ ${quickAdd.name} added to deck!`);
-      setQuickAdd({ name: '', client: '', projectStartDate: '', csDoneBy: '', pod: 'POD 1', sow: '' });
+      setQuickAdd({ name: '', client: '', projectStartDate: '', csDoneBy: '', pod: 'POD 1', sow: '', assignedAM: '' });
       setShowQuickAdd(false);
     } catch (error) {
       console.error('Error:', error);
