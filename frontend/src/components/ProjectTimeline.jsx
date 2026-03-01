@@ -328,22 +328,23 @@ export default function ProjectTimeline({ project, onUpdate }) {
     }
   };
 
-  // Get cell styling - E only shows on that specific cell
+  // Get cell styling - E and W only show on that specific clicked cell
   const getCellStyle = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
-    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key for E marker
+    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key
     const stage = stages[stageIdx];
     const isInRange = isDateInStageRange(date, stage);
-    const hasEMarker = extraDayMarkers[cellKey]; // Cell-specific E marker
+    const hasEMarkerVisual = extraDayVisual[cellKey]; // Visual: cell-specific E marker
     const isWeekendDay = isWeekend(date);
     const holidayInfo = getHolidayInfo(date);
-    const isMarkedWorking = workingDays[dateStr]; // Column-wide W marker
+    const isMarkedWorking = workingDays[dateStr]; // Execution: column-wide
+    const hasWMarkerVisual = workingDaysVisual[cellKey]; // Visual: cell-specific W marker
     
     let bgColor = '';
     let textContent = '';
     
-    // E marker - only on that specific cell (red background)
-    if (hasEMarker) {
+    // E marker - only on the clicked cell (red background with E)
+    if (hasEMarkerVisual) {
       bgColor = 'bg-red-300';
       textContent = 'E';
     }
@@ -351,15 +352,15 @@ export default function ProjectTimeline({ project, onUpdate }) {
     else if (holidayInfo && !holidayInfo.isWorking && !isMarkedWorking) {
       bgColor = 'bg-orange-200';
     }
-    // Weekend/Holiday marked as working (W marker) - show W only in first row for visual clarity
+    // Weekend/Holiday marked as working
     else if ((isWeekendDay || holidayInfo) && isMarkedWorking) {
       if (isInRange) {
         bgColor = stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
       } else {
         bgColor = 'bg-green-100';
       }
-      // Show W only on first stage row to avoid visual clutter
-      if (stageIdx === 0) {
+      // Show W only on the clicked cell
+      if (hasWMarkerVisual) {
         textContent = 'W';
       }
     }
