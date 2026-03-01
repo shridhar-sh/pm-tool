@@ -304,12 +304,13 @@ export default function ProjectTimeline({ project, onUpdate }) {
   // Get cell styling - E only shows on that specific cell
   const getCellStyle = (date, stageIdx) => {
     const dateStr = format(date, 'yyyy-MM-dd');
+    const cellKey = `${stageIdx}-${dateStr}`; // Cell-specific key for E marker
     const stage = stages[stageIdx];
     const isInRange = isDateInStageRange(date, stage);
-    const hasEMarker = extraDayMarkers[dateStr];
+    const hasEMarker = extraDayMarkers[cellKey]; // Cell-specific E marker
     const isWeekendDay = isWeekend(date);
     const holidayInfo = getHolidayInfo(date);
-    const isMarkedWorking = workingDays[dateStr];
+    const isMarkedWorking = workingDays[dateStr]; // Column-wide W marker
     
     let bgColor = '';
     let textContent = '';
@@ -319,20 +320,23 @@ export default function ProjectTimeline({ project, onUpdate }) {
       bgColor = 'bg-red-300';
       textContent = 'E';
     }
-    // Holiday - orange background
+    // Holiday - orange background (entire column)
     else if (holidayInfo && !holidayInfo.isWorking && !isMarkedWorking) {
       bgColor = 'bg-orange-200';
     }
-    // Weekend marked as working (W marker)
+    // Weekend/Holiday marked as working (W marker) - show W only in first row for visual clarity
     else if ((isWeekendDay || holidayInfo) && isMarkedWorking) {
       if (isInRange) {
         bgColor = stage.taskType === 'SS' ? 'bg-blue-200' : 'bg-yellow-200';
       } else {
         bgColor = 'bg-green-100';
       }
-      textContent = 'W';
+      // Show W only on first stage row to avoid visual clutter
+      if (stageIdx === 0) {
+        textContent = 'W';
+      }
     }
-    // Regular weekend - gray
+    // Regular weekend - gray (entire column)
     else if (isWeekendDay) {
       bgColor = 'bg-slate-200';
     }
