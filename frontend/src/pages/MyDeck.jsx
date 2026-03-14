@@ -99,6 +99,10 @@ export default function MyDeck({ user }) {
     return team.filter(t => t.role === 'Account Manager');
   };
 
+  const getLineProducers = () => {
+    return team.filter(t => t.role === 'Line Producer');
+  };
+
   const handleQuickAdd = async () => {
     if (!quickAdd.name || !quickAdd.projectStartDate || !quickAdd.csDoneBy) {
       toast.error('Please fill Brand Name, Start Date, and CS');
