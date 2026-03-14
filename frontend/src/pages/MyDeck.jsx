@@ -324,7 +324,7 @@ export default function MyDeck({ user }) {
                 </Select>
               </div>
               <div>
-                <Label>Client Name (Optional)</Label>
+                <Label>Project Name (Optional)</Label>
                 <Input
                   value={quickAdd.client}
                   onChange={(e) => setQuickAdd({ ...quickAdd, client: e.target.value })}
@@ -358,23 +358,23 @@ export default function MyDeck({ user }) {
             <thead className="sticky top-0 bg-slate-800 text-white z-10">
               <tr>
                 <th className="border border-slate-600 p-3 text-left min-w-[200px] font-semibold">Project Name</th>
-                <th className="border border-slate-600 p-3 text-left min-w-[200px] font-semibold">SOW</th>
-                <th className="border border-slate-600 p-3 text-left min-w-[100px] font-semibold">CS</th>
-                <th className="border border-slate-600 p-3 text-center min-w-[80px] bg-red-600 font-semibold">Ext Days</th>
-                <th className="border border-slate-600 p-3 text-left min-w-[120px] font-semibold">Status</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[150px] font-semibold">SOW</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[80px] font-semibold">CS</th>
+                <th className="border border-slate-600 p-3 text-center min-w-[60px] bg-red-600 font-semibold">Ext</th>
+                <th className="border border-slate-600 p-3 text-left min-w-[100px] font-semibold">Status</th>
                 {stages.map((stage, idx) => {
-                  const prevDept = idx > 0 ? stages[idx - 1].department : null;
-                  const isNewDept = stage.department !== prevDept;
+                  // White gaps after: Onboarding (idx 0), Strategy Approval (idx 2), Shoot (idx 6)
+                  const needsGap = idx === 1 || idx === 3 || idx === 7;
                   return (
                     <th 
                       key={idx} 
-                      className={`border border-slate-600 p-2 min-w-[40px] text-center font-medium ${
-                        isNewDept ? 'border-l-4 border-l-white' : ''
+                      className={`border border-slate-600 p-2 min-w-[90px] text-center font-medium ${
+                        needsGap ? 'border-l-4 border-l-white' : ''
                       }`}
                       title={stage.name}
                     >
-                      <div className="text-[10px] leading-tight whitespace-nowrap">
-                        {stage.name.length > 8 ? stage.name.substring(0, 8) + '..' : stage.name}
+                      <div className="text-[9px] leading-tight whitespace-nowrap">
+                        {stage.name}
                       </div>
                     </th>
                   );
@@ -429,26 +429,54 @@ export default function MyDeck({ user }) {
                               </div>
                             </td>
                             <td className="border border-slate-200 p-2 bg-blue-50 text-xs">
-                              {project.sow}
+                              {/* SOW line by line */}
+                              <div className="whitespace-pre-line">
+                                {project.sow?.split(/[,\n]/).map((item, i) => (
+                                  <div key={i}>{item.trim()}</div>
+                                ))}
+                              </div>
                             </td>
-                            <td className="border border-slate-200 p-2 bg-orange-100">
+                            <td className="border border-slate-200 p-2 bg-orange-100 text-xs">
                               {project.csDoneBy}
                             </td>
-                            <td className="border border-slate-200 p-2 text-center bg-red-100 font-bold">
+                            <td className="border border-slate-200 p-2 text-center bg-red-100 font-bold text-xs">
                               {project.extraDays || 0}
                             </td>
-                            <td className="border border-slate-200 p-2 bg-slate-700 text-white text-xs">
-                              {project.statusCategory.replace('_', ' ')}
+                            <td className="border border-slate-200 p-2 bg-slate-700 text-white text-[10px]">
+                              {project.statusCategory?.replace('_', ' ')}
                             </td>
-                            {project.workflowStages.map((stage, stageIdx) => (
-                              <td key={stageIdx} className="border border-slate-200 p-2 text-center bg-blue-50">
-                                <Checkbox
-                                  checked={stage.completed}
-                                  onCheckedChange={(checked) => handleStageToggle(project.id, stageIdx, checked)}
-                                  data-testid={`checkbox-${project.id}-${stageIdx}`}
-                                />
-                              </td>
-                            ))}
+                            {project.workflowStages?.map((stage, stageIdx) => {
+                              // White gaps after: Onboarding (idx 0), Strategy Approval (idx 2), Shoot (idx 6)
+                              const needsGap = stageIdx === 1 || stageIdx === 3 || stageIdx === 7;
+                              return (
+                                <td 
+                                  key={stageIdx} 
+                                  className={`border border-slate-200 p-1 text-center bg-blue-50 ${
+                                    needsGap ? 'border-l-4 border-l-white' : ''
+                                  }`}
+                                >
+                                  <div className="flex flex-col items-center gap-1">
+                                    <Checkbox
+                                      checked={stage.completed}
+                                      onCheckedChange={(checked) => handleStageToggle(project.id, stageIdx, checked)}
+                                      data-testid={`checkbox-${project.id}-${stageIdx}`}
+                                    />
+                                    {/* Show dates below checkbox */}
+                                    {stage.startDate && (
+                                      <div className="text-[8px] text-slate-500 leading-tight">
+                                        {stage.startDate?.slice(5)}
+                                        {stage.endDate && stage.endDate !== stage.startDate && (
+                                          <>
+                                            <br/>
+                                            {stage.endDate?.slice(5)}
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
                           </tr>
                         ))}
                       </React.Fragment>
@@ -525,23 +553,22 @@ export default function MyDeck({ user }) {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Input
-                    type="date"
-                    value={editingProject.projectStartDate}
-                    onChange={(e) => setEditingProject({ ...editingProject, projectStartDate: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Input
-                    type="date"
-                    value={editingProject.projectEndDate}
-                    onChange={(e) => setEditingProject({ ...editingProject, projectEndDate: e.target.value })}
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Start Date</Label>
+                <Input
+                  type="date"
+                  value={editingProject.projectStartDate}
+                  onChange={(e) => setEditingProject({ ...editingProject, projectStartDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>End Date (Auto-calculated from timeline)</Label>
+                <Input
+                  type="date"
+                  value={editingProject.projectEndDate}
+                  disabled
+                  className="bg-slate-100"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Project Name (Optional)</Label>
@@ -552,11 +579,12 @@ export default function MyDeck({ user }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>SOW</Label>
+                <Label>SOW (one item per line)</Label>
                 <Textarea
                   value={editingProject.sow}
                   onChange={(e) => setEditingProject({ ...editingProject, sow: e.target.value })}
-                  rows={2}
+                  rows={4}
+                  placeholder="8 Ads&#10;2 creators&#10;6 statics"
                 />
               </div>
             </div>

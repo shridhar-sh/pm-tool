@@ -29,6 +29,8 @@ export default function ProjectTimeline({ project, onUpdate }) {
   // Visual: cell-based { 'stageIdx-YYYY-MM-DD': true } - shows W only on clicked cell
   const [workingDays, setWorkingDays] = useState({}); // For calculation (date-based)
   const [workingDaysVisual, setWorkingDaysVisual] = useState({}); // For display (cell-specific)
+  // Stage overlap: { stageIdx: -1 } means start 1 day earlier (overlap with previous stage)
+  const [stageOverlaps, setStageOverlaps] = useState({});
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -161,15 +163,14 @@ export default function ProjectTimeline({ project, onUpdate }) {
     return -1;
   }, []);
 
-  // Auto-calculate stage dates based on duration, extra days, and non-working days
-  const autoCalculateStageDates = useCallback((workflowStages, extraMarkers = {}) => {
+  // Auto-calculate stage dates based on duration, extra days, non-working days, and overlaps
+  const autoCalculateStageDates = useCallback((workflowStages, extraMarkers = {}, overlaps = {}) => {
     if (!project?.projectStartDate || !workflowStages?.length) return workflowStages;
     
     try {
       const updatedStages = workflowStages.map(s => ({ ...s, extraDays: 0 }));
       
       // First pass: count extra day markers for each stage using DATE-BASED logic
-      // extraMarkers keys are 'YYYY-MM-DD' format - find which stage the date belongs to
       Object.keys(extraMarkers).forEach(dateStr => {
         const stageIdx = findStageForExtraDay(dateStr, updatedStages);
         if (stageIdx >= 0) {
@@ -177,20 +178,37 @@ export default function ProjectTimeline({ project, onUpdate }) {
         }
       });
       
-      // Second pass: calculate dates
+      // Second pass: calculate dates with overlap support
       let currentDate = getNextWorkingDay(parseISO(project.projectStartDate));
       
-      updatedStages.forEach((stage) => {
-        stage.startDate = format(currentDate, 'yyyy-MM-dd');
+      updatedStages.forEach((stage, idx) => {
+        // Check if this stage has overlap with previous stage
+        const overlapDays = overlaps[idx] || 0; // negative number means overlap
+        
+        if (overlapDays < 0 && idx > 0) {
+          // Go back by overlap days from current position
+          let overlapDate = currentDate;
+          for (let i = 0; i < Math.abs(overlapDays); i++) {
+            overlapDate = addDays(overlapDate, -1);
+            // Skip non-working days going backwards
+            while (isNonWorkingDay(overlapDate)) {
+              overlapDate = addDays(overlapDate, -1);
+            }
+          }
+          stage.startDate = format(overlapDate, 'yyyy-MM-dd');
+        } else {
+          stage.startDate = format(currentDate, 'yyyy-MM-dd');
+        }
         
         const duration = parseInt(stage.duration) || 0;
         const extraDays = parseInt(stage.extraDays) || 0;
         const totalDays = duration + extraDays;
         
         if (totalDays > 0) {
-          const endDate = addWorkingDays(currentDate, totalDays);
+          const startDateParsed = parseISO(stage.startDate);
+          const endDate = addWorkingDays(startDateParsed, totalDays);
           stage.endDate = format(endDate, 'yyyy-MM-dd');
-          // Next stage starts the next working day after this stage ends
+          // Next stage starts the next working day after this stage ends (unless overlap)
           currentDate = getNextWorkingDay(addDays(endDate, 1));
         } else {
           stage.endDate = null;
@@ -202,16 +220,16 @@ export default function ProjectTimeline({ project, onUpdate }) {
       console.error('Error auto-calculating dates:', err);
       return workflowStages;
     }
-  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays]);
+  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays, isNonWorkingDay]);
 
   // Initialize stages when project changes
   useEffect(() => {
     if (project?.workflowStages) {
-      const calculatedStages = autoCalculateStageDates(project.workflowStages, extraDayMarkers);
+      const calculatedStages = autoCalculateStageDates(project.workflowStages, extraDayMarkers, stageOverlaps);
       setStages(calculatedStages);
     }
     calculateTimelineDates();
-  }, [project, autoCalculateStageDates, calculateTimelineDates, extraDayMarkers]);
+  }, [project, autoCalculateStageDates, calculateTimelineDates, extraDayMarkers, stageOverlaps]);
 
   // Handle stage field updates
   const handleStageUpdate = (stageIndex, field, value) => {
@@ -225,7 +243,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
     
     // Recalculate all dates when duration changes
     if (field === 'duration') {
-      const recalculatedStages = autoCalculateStageDates(updatedStages, extraDayMarkers);
+      const recalculatedStages = autoCalculateStageDates(updatedStages, extraDayMarkers, stageOverlaps);
       setStages(recalculatedStages);
       
       // Calculate project end date from last stage
@@ -241,6 +259,37 @@ export default function ProjectTimeline({ project, onUpdate }) {
     } else {
       setStages(updatedStages);
     }
+  };
+
+  // Handle stage overlap change
+  const handleOverlapChange = (stageIndex, value) => {
+    const newOverlaps = { ...stageOverlaps };
+    const overlapValue = parseInt(value) || 0;
+    
+    if (overlapValue === 0) {
+      delete newOverlaps[stageIndex];
+    } else {
+      newOverlaps[stageIndex] = overlapValue;
+    }
+    
+    setStageOverlaps(newOverlaps);
+    
+    // Recalculate stages
+    const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers, newOverlaps);
+    setStages(recalculatedStages);
+    
+    // Calculate project end date from last stage
+    const lastStage = recalculatedStages[recalculatedStages.length - 1];
+    const projectEndDate = lastStage?.endDate || lastStage?.startDate || project.projectEndDate;
+    
+    if (onUpdate) {
+      onUpdate({ 
+        workflowStages: recalculatedStages,
+        projectEndDate: projectEndDate
+      });
+    }
+    
+    toast.success(`Stage overlap set to ${overlapValue} day(s)`);
   };
 
   // Handle clicking on a timeline cell to add/remove "E" marker or "W" marker
@@ -470,15 +519,15 @@ export default function ProjectTimeline({ project, onUpdate }) {
             <table className="w-full text-sm border-collapse" data-testid="timeline-table">
               <thead className="sticky top-0 bg-slate-50 z-10">
                 <tr>
-                  <th className="border border-slate-200 p-2 text-left min-w-[180px] sticky left-0 bg-slate-50 z-20">
+                  <th className="border border-slate-200 p-2 text-left min-w-[150px] sticky left-0 bg-slate-50 z-20">
                     Task
                   </th>
-                  <th className="border border-slate-200 p-2 min-w-[70px] text-center">Type</th>
-                  <th className="border border-slate-200 p-2 min-w-[100px] text-center">Dept</th>
+                  <th className="border border-slate-200 p-2 min-w-[50px] text-center">Type</th>
                   <th className="border border-slate-200 p-2 min-w-[70px] text-center">Days</th>
-                  <th className="border border-slate-200 p-2 min-w-[70px] text-center text-red-600">+Extra</th>
-                  <th className="border border-slate-200 p-2 min-w-[100px] text-center bg-slate-100">Start</th>
-                  <th className="border border-slate-200 p-2 min-w-[100px] text-center bg-slate-100">End</th>
+                  <th className="border border-slate-200 p-2 min-w-[50px] text-center text-purple-600" title="Overlap with previous stage (negative = start earlier)">↔</th>
+                  <th className="border border-slate-200 p-2 min-w-[50px] text-center text-red-600">+E</th>
+                  <th className="border border-slate-200 p-2 min-w-[80px] text-center bg-slate-100">Start</th>
+                  <th className="border border-slate-200 p-2 min-w-[80px] text-center bg-slate-100">End</th>
                   {dates.map((date, idx) => {
                     const isWeekendDay = isWeekend(date);
                     const holidayInfo = getHolidayInfo(date);
@@ -515,17 +564,12 @@ export default function ProjectTimeline({ project, onUpdate }) {
               <tbody>
                 {stages.map((stage, stageIdx) => (
                   <tr key={stageIdx} className="hover:bg-slate-50" data-testid={`stage-row-${stageIdx}`}>
-                    <td className="border border-slate-200 p-2 font-medium sticky left-0 bg-white z-10">
+                    <td className="border border-slate-200 p-2 font-medium sticky left-0 bg-white z-10 text-xs">
                       {stage.name}
                     </td>
                     <td className="border border-slate-200 p-1 text-center">
-                      <Badge className={`text-xs border ${stage.taskType === 'SS' ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-yellow-100 border-yellow-300 text-yellow-700'}`}>
+                      <Badge className={`text-[10px] border ${stage.taskType === 'SS' ? 'bg-blue-100 border-blue-300 text-blue-700' : 'bg-yellow-100 border-yellow-300 text-yellow-700'}`}>
                         {stage.taskType}
-                      </Badge>
-                    </td>
-                    <td className="border border-slate-200 p-1 text-center">
-                      <Badge className={`text-xs border ${getDeptColor(stage.department)}`}>
-                        {stage.department?.replace('_', ' ') || '-'}
                       </Badge>
                     </td>
                     <td className="border border-slate-200 p-1">
@@ -536,18 +580,41 @@ export default function ProjectTimeline({ project, onUpdate }) {
                         value={stage.duration || ''}
                         onChange={(e) => handleStageUpdate(stageIdx, 'duration', e.target.value)}
                         placeholder="0"
-                        className="h-8 text-xs text-center w-16 mx-auto"
+                        className="h-7 text-xs text-center w-12 mx-auto"
                         data-testid={`stage-duration-${stageIdx}`}
                       />
                     </td>
-                    <td className="border border-slate-200 p-2 text-center font-mono text-xs text-red-600 font-bold">
+                    <td className="border border-slate-200 p-1">
+                      {stageIdx > 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Input
+                              type="number"
+                              min="-5"
+                              max="0"
+                              value={stageOverlaps[stageIdx] || ''}
+                              onChange={(e) => handleOverlapChange(stageIdx, e.target.value)}
+                              placeholder="0"
+                              className="h-7 text-xs text-center w-12 mx-auto"
+                              data-testid={`stage-overlap-${stageIdx}`}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Set -1 to overlap with last day of previous stage</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span className="text-slate-300 text-xs">-</span>
+                      )}
+                    </td>
+                    <td className="border border-slate-200 p-1 text-center font-mono text-xs text-red-600 font-bold">
                       {stage.extraDays || 0}
                     </td>
-                    <td className="border border-slate-200 p-2 bg-slate-50 font-mono text-xs text-center">
-                      {stage.startDate || '-'}
+                    <td className="border border-slate-200 p-1 bg-slate-50 font-mono text-[10px] text-center">
+                      {stage.startDate?.slice(5) || '-'}
                     </td>
-                    <td className="border border-slate-200 p-2 bg-slate-50 font-mono text-xs text-center">
-                      {stage.endDate || '-'}
+                    <td className="border border-slate-200 p-1 bg-slate-50 font-mono text-[10px] text-center">
+                      {stage.endDate?.slice(5) || '-'}
                     </td>
                     {dates.map((date, dateIdx) => {
                       const { bgColor, textContent } = getCellStyle(date, stageIdx);
