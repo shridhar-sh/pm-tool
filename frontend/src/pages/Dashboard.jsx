@@ -236,7 +236,7 @@ export default function Dashboard({ user }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Client Name (Optional)</Label>
+                <Label>Project Name (Optional)</Label>
                 <Input
                   value={newProject.client}
                   onChange={(e) => setNewProject({ ...newProject, client: e.target.value })}

@@ -142,37 +142,32 @@ export default function MyDeck({ user }) {
       const updatedStages = [...project.workflowStages];
       updatedStages[stageIndex].completed = completed;
 
-      // Auto-calculate status based on the LAST completed stage
+      // Auto-calculate status based on completed stages
+      // Status logic:
+      // - yet_to_start: Nothing completed or only before Onboarding
+      // - pre_production: Onboarding completed
+      // - production: Pre Production or PPM completed
+      // - post_production: Shoot completed
+      // - closed: Final Approval completed
+      
       let newStatus = 'yet_to_start';
       
-      // Define stage groups
-      const stageGroups = {
-        'yet_to_start': ['Onboarding Form', 'Onboarding'],
-        'strategy': ['Products', 'Research', 'Brainstorm Session', 'Scripts', 'Scripts Approval'],
-        'pre_production': ['Model brief to LP', 'Internal KT Production', 'Storyboarding', 'Model list to client', 'Model Approval'],
-        'production': ['PPM', 'Shoot'],
-        'post_production': ['Internal KT Post', 'Edits', 'Feedback'],
-        'correction_ongoing': ['Revision'],
-        'closed': ['Project Closed']
+      // Check which stages are completed
+      const isCompleted = (stageName) => {
+        const stage = updatedStages.find(s => s.name === stageName);
+        return stage?.completed || false;
       };
 
-      // Find the last completed stage
-      let lastCompletedStage = null;
-      for (let i = updatedStages.length - 1; i >= 0; i--) {
-        if (updatedStages[i].completed) {
-          lastCompletedStage = updatedStages[i].name;
-          break;
-        }
-      }
-
-      // Determine status based on last completed stage
-      if (lastCompletedStage) {
-        for (const [status, stages] of Object.entries(stageGroups)) {
-          if (stages.includes(lastCompletedStage)) {
-            newStatus = status;
-            break;
-          }
-        }
+      if (isCompleted('Final Approval')) {
+        newStatus = 'closed';
+      } else if (isCompleted('Shoot')) {
+        newStatus = 'post_production';
+      } else if (isCompleted('Pre Production') || isCompleted('PPM')) {
+        newStatus = 'production';
+      } else if (isCompleted('Onboarding')) {
+        newStatus = 'pre_production';
+      } else {
+        newStatus = 'yet_to_start';
       }
 
       await axios.patch(`${API}/projects/${projectId}`, {
@@ -185,6 +180,23 @@ export default function MyDeck({ user }) {
       ));
     } catch (error) {
       console.error('Error:', error);
+    }
+  };
+
+  const handleDeleteProject = async (projectId) => {
+    if (!window.confirm('Are you sure you want to delete this project?')) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/projects/${projectId}`);
+      setProjects(projects.filter(p => p.id !== projectId));
+      setEditDialogOpen(false);
+      setEditingProject(null);
+      toast.success('Project deleted');
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to delete project');
     }
   };
 
@@ -203,28 +215,20 @@ export default function MyDeck({ user }) {
 
   const stages = [
     // Strategy Phase
-    { name: 'Onboarding Form', department: 'strategy' },
     { name: 'Onboarding', department: 'strategy' },
+    { name: 'Strategy', department: 'strategy' },
+    { name: 'Strategy Approval', department: 'strategy' },
     { name: 'Products', department: 'strategy' },
-    { name: 'Research', department: 'strategy' },
-    { name: 'Brainstorm Session', department: 'strategy' },
     // Pre-Production Phase
-    { name: 'Scripts', department: 'pre_production' },
-    { name: 'Scripts Approval', department: 'pre_production' },
-    { name: 'Model brief to LP', department: 'pre_production' },
-    { name: 'Internal KT Production', department: 'pre_production' },
-    { name: 'Storyboarding', department: 'pre_production' },
+    { name: 'Pre Production', department: 'pre_production' },
+    { name: 'PPM', department: 'pre_production' },
     // Production Phase
-    { name: 'Model list to client', department: 'production' },
-    { name: 'Model Approval', department: 'production' },
-    { name: 'PPM', department: 'production' },
     { name: 'Shoot', department: 'production' },
     // Post-Production Phase
-    { name: 'Internal KT Post', department: 'post_production' },
     { name: 'Edits', department: 'post_production' },
     { name: 'Feedback', department: 'post_production' },
     { name: 'Revision', department: 'post_production' },
-    { name: 'Project Closed', department: 'post_production' }
+    { name: 'Final Approval', department: 'post_production' }
   ];
 
   const departmentLabels = {
@@ -507,15 +511,15 @@ export default function MyDeck({ user }) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Line Producer</Label>
-                <Select value={editingProject.assignedLP || ''} onValueChange={(value) => setEditingProject({ ...editingProject, assignedLP: value })}>
+                <Label>Account Manager</Label>
+                <Select value={editingProject.assignedAM || ''} onValueChange={(value) => setEditingProject({ ...editingProject, assignedAM: value })}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select LP" />
+                    <SelectValue placeholder="Select AM" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getLineProducers().map(lp => (
-                      <SelectItem key={lp.id} value={lp.shortName || lp.name}>
-                        {lp.shortName || lp.name}
+                    {getAccountManagers().map(am => (
+                      <SelectItem key={am.id} value={am.shortName || am.name}>
+                        {am.shortName || am.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -540,10 +544,11 @@ export default function MyDeck({ user }) {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Client Name</Label>
+                <Label>Project Name (Optional)</Label>
                 <Input
                   value={editingProject.client}
                   onChange={(e) => setEditingProject({ ...editingProject, client: e.target.value })}
+                  placeholder="Same as brand"
                 />
               </div>
               <div className="space-y-2">
@@ -556,13 +561,22 @@ export default function MyDeck({ user }) {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Cancel
+          <DialogFooter className="flex justify-between">
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDeleteProject(editingProject.id)}
+              className="mr-auto"
+            >
+              Delete Project
             </Button>
-            <Button onClick={handleEditProject} className="bg-slate-900 hover:bg-slate-800">
-              Save Changes
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditProject} className="bg-slate-900 hover:bg-slate-800">
+                Save Changes
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
