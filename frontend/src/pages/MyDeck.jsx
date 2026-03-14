@@ -12,9 +12,21 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { format, parseISO } from 'date-fns';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Format date as dd-mm-yy
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = parseISO(dateStr);
+    return format(date, 'dd-MM-yy');
+  } catch {
+    return dateStr;
+  }
+};
 
 export default function MyDeck({ user }) {
   const navigate = useNavigate();
@@ -455,24 +467,22 @@ export default function MyDeck({ user }) {
                                     needsGap ? 'border-l-4 border-l-white' : ''
                                   }`}
                                 >
-                                  <div className="flex flex-col items-center gap-1">
+                                  <div className="flex flex-col items-center gap-0.5">
                                     <Checkbox
                                       checked={stage.completed}
                                       onCheckedChange={(checked) => handleStageToggle(project.id, stageIdx, checked)}
                                       data-testid={`checkbox-${project.id}-${stageIdx}`}
                                     />
-                                    {/* Show dates below checkbox */}
-                                    {stage.startDate && (
-                                      <div className="text-[8px] text-slate-500 leading-tight">
-                                        {stage.startDate?.slice(5)}
-                                        {stage.endDate && stage.endDate !== stage.startDate && (
-                                          <>
-                                            <br/>
-                                            {stage.endDate?.slice(5)}
-                                          </>
-                                        )}
-                                      </div>
-                                    )}
+                                    {/* Show dates below checkbox in dd-mm-yy format */}
+                                    <div className="text-[7px] text-slate-500 leading-tight">
+                                      {stage.startDate ? formatDate(stage.startDate) : '-'}
+                                      {stage.endDate && stage.endDate !== stage.startDate && (
+                                        <>
+                                          <br/>
+                                          {formatDate(stage.endDate)}
+                                        </>
+                                      )}
+                                    </div>
                                   </div>
                                 </td>
                               );

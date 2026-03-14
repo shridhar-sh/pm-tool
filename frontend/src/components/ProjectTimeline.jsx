@@ -611,10 +611,10 @@ export default function ProjectTimeline({ project, onUpdate }) {
                       {stage.extraDays || 0}
                     </td>
                     <td className="border border-slate-200 p-1 bg-slate-50 font-mono text-[10px] text-center">
-                      {stage.startDate?.slice(5) || '-'}
+                      {stage.startDate ? format(parseISO(stage.startDate), 'dd-MM-yy') : '-'}
                     </td>
                     <td className="border border-slate-200 p-1 bg-slate-50 font-mono text-[10px] text-center">
-                      {stage.endDate?.slice(5) || '-'}
+                      {stage.endDate ? format(parseISO(stage.endDate), 'dd-MM-yy') : '-'}
                     </td>
                     {dates.map((date, dateIdx) => {
                       const { bgColor, textContent } = getCellStyle(date, stageIdx);
