@@ -34,6 +34,8 @@ def tasks():        return db["tasks"]
 def subtasks():     return db["subtasks"]
 def approvals():    return db["approvals"]
 def rounds():       return db["rounds"]
+def time_entries(): return db["time_entries"]
+def timer_sessions(): return db["timer_sessions"]
 def holidays():    return db["holidays"]
 
 
@@ -58,6 +60,10 @@ async def ensure_indexes() -> None:
     await approvals().create_index("projectId")
     await approvals().create_index("magicLinkToken")
     await rounds().create_index("deliverableId")
+    await time_entries().create_index("projectId")
+    await time_entries().create_index("userId")
+    await time_entries().create_index("date")
+    await timer_sessions().create_index("userId", unique=True)
     await holidays().create_index("date")
 
 

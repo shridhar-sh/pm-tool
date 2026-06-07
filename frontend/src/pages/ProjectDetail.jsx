@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Users as UsersIcon, Plus, CheckCircle, Circle,
   Layers, FilmIcon, Film, ListChecks, ShieldCheck, MessageSquare,
-  CalendarRange,
+  CalendarRange, Wallet, Receipt, Printer, Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ import { toast } from 'sonner';
 import {
   Projects, Clients as ClientsApi, Users as UsersApi,
   Campaigns, Deliverables, Phases, Tasks, Subtasks, Approvals,
-  Departments,
+  Departments, TimeEntries,
 } from '@/lib/api';
 import RoundsDrawer from '@/components/RoundsDrawer';
 import Gantt from '@/components/Gantt';
@@ -165,12 +165,14 @@ export default function ProjectDetail({ user }) {
           <TabsTrigger value="campaigns" data-testid="tab-campaigns"><FilmIcon className="w-4 h-4 mr-2" />Campaigns</TabsTrigger>
           <TabsTrigger value="deliverables" data-testid="tab-deliverables"><Film className="w-4 h-4 mr-2" />Deliverables</TabsTrigger>
           <TabsTrigger value="approvals" data-testid="tab-approvals"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</TabsTrigger>
+          <TabsTrigger value="financials" data-testid="tab-financials"><Wallet className="w-4 h-4 mr-2" />Financials</TabsTrigger>
         </TabsList>
 
         <TabsContent value="phases" className="mt-4">
           <PhasesTab
             project={project} phases={phases} tasksByPhase={tasksByPhase}
             subtasksByTask={subtasksByTask} usersById={usersById} canEdit={canEdit}
+            currentUserId={currentUserId}
             onChanged={loadAll}
           />
         </TabsContent>
@@ -196,6 +198,10 @@ export default function ProjectDetail({ user }) {
             project={project} approvals={approvals} usersById={usersById}
             user={user} onChanged={loadAll}
           />
+        </TabsContent>
+
+        <TabsContent value="financials" className="mt-4">
+          <FinancialsTab project={project} usersById={usersById} tasks={tasks} />
         </TabsContent>
       </Tabs>
     </div>
@@ -243,11 +249,52 @@ function WorkflowStepper({ stages }) {
 
 // ---------- Phases tab ----------
 
-function PhasesTab({ project, phases, tasksByPhase, subtasksByTask, usersById, canEdit, onChanged }) {
+function PhasesTab({ project, phases, tasksByPhase, subtasksByTask, usersById, canEdit, onChanged, currentUserId }) {
   const [phaseDialogOpen, setPhaseDialogOpen] = useState(false);
   const [taskDialog, setTaskDialog] = useState({ open: false, phaseId: null });
   const [phaseDraft, setPhaseDraft] = useState({ name: '', plannedStart: '', plannedEnd: '' });
   const [taskDraft, setTaskDraft] = useState({ name: '', description: '', assigneeUserId: '', priority: 'medium', plannedStart: '', plannedEnd: '', estimateHrs: 0 });
+
+  // ---- Live-timer state (per current user) ----
+  const [activeTimer, setActiveTimer] = useState(null);  // null | {id, taskId, projectId, startedAt}
+  const [, setTickNow] = useState(Date.now());
+
+  useEffect(() => { (async () => {
+    if (!currentUserId) return;
+    try { setActiveTimer(await TimeEntries.activeFor(currentUserId)); }
+    catch (e) { /* ignore */ }
+  })(); }, [currentUserId]);
+
+  useEffect(() => {
+    if (!activeTimer) return;
+    const h = setInterval(() => setTickNow(Date.now()), 1000);
+    return () => clearInterval(h);
+  }, [activeTimer]);
+
+  async function startTimer(task) {
+    if (!currentUserId) return toast.error('Cannot resolve user — relogin');
+    try {
+      const s = await TimeEntries.startTimer({
+        agencyId: project.agencyId,
+        userId: currentUserId,
+        projectId: project.id,
+        taskId: task.id,
+        billable: true,
+      });
+      setActiveTimer(s);
+      toast.success(`Timer started on "${task.name}"`);
+    } catch (e) { console.error(e); toast.error('Failed to start timer'); }
+  }
+
+  async function stopTimer() {
+    if (!currentUserId) return;
+    try {
+      const entry = await TimeEntries.stopTimer(currentUserId);
+      setActiveTimer(null);
+      toast.success(`Logged ${entry.hours}h`);
+      onChanged();
+    } catch (e) { console.error(e); toast.error('Failed to stop timer'); }
+  }
 
   const allUsers = Object.values(usersById);
 
@@ -370,6 +417,13 @@ function PhasesTab({ project, phases, tasksByPhase, subtasksByTask, usersById, c
                         <li key={t.id} className="p-4">
                           <div className="flex items-start gap-3">
                             <Checkbox checked={t.status === 'done'} onCheckedChange={() => toggleTaskStatus(t)} className="mt-1" />
+                            <TaskTimerButton
+                              task={t}
+                              activeTimer={activeTimer}
+                              onStart={startTimer}
+                              onStop={stopTimer}
+                              canTime={!!currentUserId}
+                            />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-sm font-medium ${t.status === 'done' ? 'line-through text-slate-400' : 'text-slate-900'}`}>
@@ -738,6 +792,140 @@ function DeliverablesTab({ project, deliverables, campaigns, usersById, canEdit,
   );
 }
 
+// ---------- Financials tab ----------
+
+const fmtINR = (n) => {
+  if (n === null || n === undefined) return '—';
+  const abs = Math.abs(n);
+  if (abs >= 1e7) return `${(n / 1e7).toFixed(2)}Cr`;
+  if (abs >= 1e5) return `${(n / 1e5).toFixed(2)}L`;
+  return `₹${Math.round(n).toLocaleString('en-IN')}`;
+};
+
+function FinancialsTab({ project, usersById, tasks }) {
+  const navigate = useNavigate();
+  const [fin, setFin] = useState(null);
+  const [entries, setEntries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const tasksById = useMemo(() => Object.fromEntries(tasks.map(t => [t.id, t])), [tasks]);
+
+  useEffect(() => { (async () => {
+    setLoading(true);
+    try {
+      const [f, es] = await Promise.all([
+        Projects.financials(project.id),
+        TimeEntries.list({ projectId: project.id }),
+      ]);
+      setFin(f);
+      setEntries(es);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to load financials');
+    } finally {
+      setLoading(false);
+    }
+  })(); }, [project.id]);
+
+  if (loading) return <Card className="border border-slate-200 shadow-sm"><CardContent className="py-12 text-center text-slate-500">Loading…</CardContent></Card>;
+  if (!fin) return null;
+
+  const budgetUsed = fin.budgetUsedPct;
+  const marginColor = (fin.marginPct ?? 0) >= 30 ? 'text-green-700' : (fin.marginPct ?? 0) >= 10 ? 'text-amber-700' : 'text-red-700';
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <FinCard label="Budget"        value={fmtINR(fin.budgetINR)} color="violet" />
+        <FinCard label="Billed"        value={fmtINR(fin.billableInr)} foot={`${fin.billableHours}h billable`} color="blue" />
+        <FinCard label="Internal cost" value={fmtINR(fin.internalCostInr)} foot={`${fin.internalHours}h internal`} color="amber" />
+        <FinCard label="Profit"        value={fmtINR(fin.profit)} foot={fin.marginPct !== null ? `${fin.marginPct}% margin` : '—'} color={(fin.marginPct ?? 0) >= 30 ? 'green' : (fin.marginPct ?? 0) >= 10 ? 'amber' : 'red'} />
+      </div>
+
+      <Card className="border border-slate-200 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Receipt className="w-4 h-4" />Time entries ({entries.length})
+          </CardTitle>
+          <div className="flex items-center gap-3">
+            {budgetUsed !== null && (
+              <span className="text-xs text-slate-500">budget used: <span className={`font-mono ${budgetUsed > 100 ? 'text-red-700 font-bold' : 'text-slate-700'}`}>{budgetUsed}%</span></span>
+            )}
+            <Button size="sm" variant="outline" onClick={() => navigate(`/invoice/${project.id}`)}>
+              <Printer className="w-4 h-4 mr-2" />Invoice
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {entries.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-8">No time logged yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-xs text-slate-500 uppercase tracking-wide">
+                  <tr>
+                    <th className="text-left p-3">Date</th>
+                    <th className="text-left p-3">User</th>
+                    <th className="text-left p-3">Task</th>
+                    <th className="text-right p-3">Hours</th>
+                    <th className="text-right p-3">Rate</th>
+                    <th className="text-right p-3">Amount</th>
+                    <th className="text-center p-3">Type</th>
+                    <th className="text-left p-3">Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map(e => {
+                    const u = usersById[e.userId];
+                    const t = tasksById[e.taskId];
+                    const amt = e.hours * e.billRateINRSnapshot;
+                    return (
+                      <tr key={e.id} className="border-t border-slate-100">
+                        <td className="p-3 font-mono text-xs">{e.date}</td>
+                        <td className="p-3">{u?.shortName || u?.name || '—'}</td>
+                        <td className="p-3">{t?.name || '—'}</td>
+                        <td className="p-3 text-right font-mono">{e.hours.toFixed(2)}</td>
+                        <td className="p-3 text-right font-mono text-slate-600">₹{e.billRateINRSnapshot.toLocaleString('en-IN')}</td>
+                        <td className="p-3 text-right font-mono">{fmtINR(amt)}</td>
+                        <td className="p-3 text-center">
+                          <Badge className={`text-xs rounded-full border ${e.billable ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                            {e.billable ? 'billable' : 'internal'}
+                          </Badge>
+                        </td>
+                        <td className="p-3 text-xs text-slate-600 max-w-[20rem] truncate">{e.notes || ''}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+const FIN_COLOR = {
+  violet: { bg: 'bg-violet-50', text: 'text-violet-600' },
+  blue:   { bg: 'bg-blue-50',   text: 'text-blue-600' },
+  amber:  { bg: 'bg-amber-50',  text: 'text-amber-600' },
+  green:  { bg: 'bg-green-50',  text: 'text-green-600' },
+  red:    { bg: 'bg-red-50',    text: 'text-red-600' },
+};
+
+function FinCard({ label, value, foot, color = 'violet' }) {
+  const c = FIN_COLOR[color] || FIN_COLOR.violet;
+  return (
+    <Card className="border border-slate-200 shadow-sm">
+      <CardContent className="p-5">
+        <p className="text-xs text-slate-500 font-medium uppercase tracking-wide">{label}</p>
+        <p className={`text-2xl font-bold mt-2 ${c.text}`}>{value}</p>
+        {foot && <p className="text-xs text-slate-500 mt-1">{foot}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ---------- Approvals tab ----------
 
 function ApprovalsTab({ project, approvals, usersById, user, onChanged }) {
@@ -805,5 +993,50 @@ function Labeled({ label, children }) {
       <Label className="text-xs font-medium text-slate-700">{label}</Label>
       {children}
     </div>
+  );
+}
+
+/**
+ * Inline Start/Stop button for a single task. Re-renders every second when
+ * a timer is running so the elapsed badge stays live.
+ */
+function TaskTimerButton({ task, activeTimer, onStart, onStop, canTime }) {
+  if (!canTime) return null;
+  const running = activeTimer && activeTimer.taskId === task.id;
+  const otherRunning = activeTimer && activeTimer.taskId !== task.id;
+
+  if (running) {
+    const elapsedMs = Date.now() - new Date(activeTimer.startedAt).getTime();
+    const totalSec = Math.max(0, Math.floor(elapsedMs / 1000));
+    const hh = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const ss = String(totalSec % 60).padStart(2, '0');
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={onStop}
+        data-testid={`timer-stop-${task.id}`}
+        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100 font-mono"
+        title="Stop timer and log the elapsed time"
+      >
+        <span className="inline-block w-2 h-2 bg-red-600 rounded-sm mr-2 animate-pulse" />
+        {hh}:{mm}:{ss}
+      </Button>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      onClick={() => onStart(task)}
+      disabled={!!otherRunning}
+      data-testid={`timer-start-${task.id}`}
+      className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+      title={otherRunning ? 'Another timer is running — stop it first' : 'Start timer for this task'}
+    >
+      <Clock className="w-4 h-4" />
+    </Button>
   );
 }

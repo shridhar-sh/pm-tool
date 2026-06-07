@@ -30,7 +30,9 @@ from routers.holidays import HOLIDAYS_2026
 V2_COLLECTIONS = [
     "agencies", "departments", "pods", "users", "clients",
     "projects", "campaigns", "deliverables",
-    "phases", "tasks", "subtasks", "approvals", "rounds", "holidays",
+    "phases", "tasks", "subtasks", "approvals", "rounds",
+    "time_entries", "timer_sessions",
+    "holidays",
 ]
 
 
@@ -391,6 +393,53 @@ async def run(wipe: bool = True) -> Dict:
         "createdAt": _now(),
     })
 
+    # ---------- Time entries (sample on Nike Summer) ----------
+    # Each entry snapshots the user's billRateINR at log time.
+    by_user = {u_id: rate for email, u_id, rate in [
+        ("am@agency.com",    am,    1500),
+        ("strat1@agency.com", strat1, 1200),
+        ("lp@agency.com",    lp,    1500),
+        ("post1@agency.com", sneha, 1100),
+    ]}
+
+    time_specs = [
+        # (userId, taskId, date, hours, billable, notes)
+        (am,     t_brief["id"],   "2026-06-01", 2.0, True,  "Client onboarding call + brief recap"),
+        (am,     t_brief["id"],   "2026-06-02", 2.0, True,  "Wrote brief recap, sent to client"),
+        (strat1, t_concept["id"], "2026-06-08", 6.0, True,  "Mood-board pass 1"),
+        (strat1, t_concept["id"], "2026-06-12", 8.0, True,  "Concept R2"),
+        (strat1, t_concept["id"], "2026-06-15", 4.0, False, "Internal review session"),
+        (lp,     t_prep["id"],    "2026-06-23", 4.0, True,  "Site visit — studio shortlist"),
+        (lp,     t_prep["id"],    "2026-06-24", 2.0, True,  "Vendor quotes follow-up"),
+    ]
+
+    time_docs = []
+    for uid, tid, dstr, hrs, billable, note in time_specs:
+        rate = by_user.get(uid, 0)
+        time_docs.append({
+            "id": _id(),
+            "createdAt": _now(),
+            "agencyId": A,
+            "projectId": p1,
+            "taskId": tid,
+            "userId": uid,
+            "date": dstr,
+            "hours": hrs,
+            "billable": billable,
+            "billRateINRSnapshot": rate,
+            "notes": note,
+            "timerStartedAt": None,
+            "timerStoppedAt": None,
+        })
+    await db.time_entries().insert_many(time_docs)
+
+    # Roll the seeded actualHrs onto the tasks they belong to.
+    actual_by_task: Dict[str, float] = {}
+    for d in time_docs:
+        actual_by_task[d["taskId"]] = actual_by_task.get(d["taskId"], 0) + d["hours"]
+    for tid, h in actual_by_task.items():
+        await db.tasks().update_one({"id": tid}, {"$set": {"actualHrs": h}})
+
     # ---------- Holidays ----------
     holiday_docs = [
         {
@@ -420,6 +469,7 @@ async def run(wipe: bool = True) -> Dict:
             "subtasks": len(subtasks_for_prep),
             "approvals": 2,
             "rounds": 1,
+            "time_entries": len(time_docs),
             "holidays": len(holiday_docs),
         },
         "demo_logins": [

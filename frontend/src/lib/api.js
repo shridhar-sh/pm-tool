@@ -67,6 +67,7 @@ export const Projects = {
   delete:      (id)                => del(`/projects/${id}`),
   updateStage: (id, idx, p)        => patch(`/projects/${id}/stages/${idx}`, p),
   schedule:    (id)                => get(`/projects/${id}/schedule`),
+  financials:  (id)                => get(`/projects/${id}/financials`),
 };
 
 // ---------- Campaigns ----------
@@ -156,6 +157,18 @@ export const Approvals = {
   cancel:         (id)         => del(`/approvals/${id}`),
   getByToken:     (token)      => get(`/public/approvals/${token}`),
   decideByToken:  (token, body) => post(`/public/approvals/${token}/decide`, body),
+};
+
+// ---------- Time entries + live timer ----------
+export const TimeEntries = {
+  list:   (params) => get('/time-entries', params),
+  create: (body)   => post('/time-entries', body),
+  update: (id, p)  => patch(`/time-entries/${id}`, p),
+  delete: (id)     => del(`/time-entries/${id}`),
+  // Timer
+  activeFor: (userId) => get('/time-entries/timer/active', { userId }),
+  startTimer: (body)  => post('/time-entries/timer/start', body),
+  stopTimer:  (userId) => post(`/time-entries/timer/stop?userId=${encodeURIComponent(userId)}`),
 };
 
 // ---------- Capacity ----------

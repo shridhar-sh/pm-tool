@@ -478,6 +478,71 @@ class ApprovalDecision(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Time tracking
+# ---------------------------------------------------------------------------
+
+class TimeEntry(_Base):
+    """A single logged interval of work, in hours."""
+    agencyId: str
+    projectId: str
+    taskId: Optional[str] = None
+    userId: str
+    date: str                       # YYYY-MM-DD
+    hours: float
+    billable: bool = True
+    # Snapshot of the user's billRateINR at log time so historical invoices
+    # don't shift when rates change.
+    billRateINRSnapshot: int = 0
+    notes: Optional[str] = None
+    # Set when this entry was produced by a stopped timer.
+    timerStartedAt: Optional[str] = None
+    timerStoppedAt: Optional[str] = None
+
+
+class TimeEntryCreate(BaseModel):
+    agencyId: str
+    projectId: str
+    taskId: Optional[str] = None
+    userId: str
+    date: str
+    hours: float
+    billable: bool = True
+    notes: Optional[str] = None
+    # If absent, the router snapshots from the user record.
+    billRateINRSnapshot: Optional[int] = None
+    timerStartedAt: Optional[str] = None
+    timerStoppedAt: Optional[str] = None
+
+
+class TimeEntryUpdate(BaseModel):
+    date: Optional[str] = None
+    hours: Optional[float] = None
+    billable: Optional[bool] = None
+    notes: Optional[str] = None
+    taskId: Optional[str] = None
+
+
+class TimerSession(_Base):
+    """Live running-timer session for one user. Only one active per user."""
+    agencyId: str
+    userId: str
+    projectId: str
+    taskId: Optional[str] = None
+    startedAt: str = Field(default_factory=_now_iso)
+    notes: Optional[str] = None
+    billable: bool = True
+
+
+class TimerStart(BaseModel):
+    agencyId: str
+    userId: str
+    projectId: str
+    taskId: Optional[str] = None
+    notes: Optional[str] = None
+    billable: bool = True
+
+
+# ---------------------------------------------------------------------------
 # Holidays (v1 — kept as-is)
 # ---------------------------------------------------------------------------
 

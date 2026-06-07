@@ -21,6 +21,7 @@ from routers import org as org_router
 from routers import projects as projects_router
 from routers import rounds as rounds_router
 from routers import tasks as tasks_router
+from routers import time as time_router
 from storage import ensure_upload_dir
 
 logging.basicConfig(
@@ -59,6 +60,7 @@ api.include_router(org_router.router,       tags=["org"])
 api.include_router(projects_router.router,  tags=["projects"])
 api.include_router(tasks_router.router,     tags=["tasks"])
 api.include_router(rounds_router.router,    tags=["rounds"])
+api.include_router(time_router.router,      tags=["time"])
 api.include_router(capacity_router.router,  tags=["capacity"])
 api.include_router(holidays_router.router,  tags=["holidays"])
 

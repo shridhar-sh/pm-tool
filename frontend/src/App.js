@@ -19,6 +19,8 @@ import Clients from '@/pages/Clients';
 import ClientDetail from '@/pages/ClientDetail';
 import PublicApproval from '@/pages/PublicApproval';
 import Capacity from '@/pages/Capacity';
+import TimeEntriesPage from '@/pages/TimeEntries';
+import Invoice from '@/pages/Invoice';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -236,6 +238,31 @@ function App() {
               >
                 <Capacity user={user} />
               </ProtectedRoute>
+            }
+          />
+
+          {/* Time entries - all roles. Non-PM/AM see only their own. */}
+          <Route
+            path="/time"
+            element={
+              <ProtectedRoute
+                user={user}
+                allowedRoles={[ROLES.PM, ROLES.AM, ROLES.LP, ROLES.TEAM]}
+                onLogout={handleLogout}
+              >
+                <TimeEntriesPage user={user} />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Invoice — PM only, rendered full-page (no sidebar) so the
+              browser print dialog produces a clean A4 layout. */}
+          <Route
+            path="/invoice/:projectId"
+            element={
+              user && hasAccess(user.role, [ROLES.PM])
+                ? <Invoice user={user} />
+                : <Navigate to={user ? '/' : '/login'} />
             }
           />
 
