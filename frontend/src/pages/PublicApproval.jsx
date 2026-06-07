@@ -211,7 +211,6 @@ function PublicFile({ file }) {
         {isImage ? (
           <img src={url} alt={file.name} className="w-full h-full object-cover" />
         ) : isVideo ? (
-          // eslint-disable-next-line jsx-a11y/media-has-caption
           <video src={url} className="w-full h-full object-cover" controls />
         ) : (
           <FileText className="w-10 h-10 text-slate-400" />
