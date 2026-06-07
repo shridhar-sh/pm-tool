@@ -1,395 +1,289 @@
-import { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Users as UsersIcon, Trash2, ChevronDown, ChevronRight, Building } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import axios from 'axios';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import { Agencies, Departments, Pods, Users } from '@/lib/api';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+const ROLES = [
+  'project_manager', 'account_manager', 'line_producer', 'team_member',
+  'strategist', 'pre_production', 'production', 'editor',
+];
 
 export default function TeamDirectory({ user }) {
-  const [team, setTeam] = useState([]);
+  const [agencyId, setAgencyId] = useState(null);
+  const [departments, setDepartments] = useState([]);
+  const [pods, setPods] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState({});  // dept id -> bool
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingMember, setEditingMember] = useState(null);
-  const [newMember, setNewMember] = useState({
-    employeeId: '',
-    name: '',
-    shortName: '',
-    role: '',
-    department: '',
-    pod: ''
-  });
+  const [draft, setDraft] = useState(emptyDraft());
 
-  const [editingShortName, setEditingShortName] = useState(null);
-  const [tempShortName, setTempShortName] = useState('');
+  function emptyDraft() {
+    return { employeeId: '', name: '', shortName: '', email: '', role: 'team_member',
+             departmentId: '', podId: '', capacityHrsPerWeek: 40, billRateINR: 0 };
+  }
 
-  useEffect(() => {
-    fetchTeam();
-  }, []);
+  useEffect(() => { (async () => { await loadAll(); })(); }, []);
 
-  const fetchTeam = async () => {
+  async function loadAll() {
+    setLoading(true);
     try {
-      const response = await axios.get(`${API}/team-members`);
-      setTeam(response.data);
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to load team');
+      const ags = await Agencies.list();
+      const agency = ags[0];
+      const aid = agency?.id;
+      setAgencyId(aid);
+      const [d, p, u] = await Promise.all([
+        Departments.list(aid),
+        Pods.list(aid),
+        Users.list({ agencyId: aid }),
+      ]);
+      setDepartments(d);
+      setPods(p);
+      setUsers(u);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to load directory');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const handleAddMember = async () => {
-    if (!newMember.employeeId || !newMember.name || !newMember.role || !newMember.department) {
-      toast.error('Please fill all required fields');
-      return;
+  const tree = useMemo(() => {
+    const podsByDept = {};
+    for (const p of pods) {
+      const k = p.departmentId || '__none__';
+      (podsByDept[k] = podsByDept[k] || []).push(p);
     }
+    const usersByPod = {};
+    const usersByDeptNoPod = {};
+    const orphans = [];
+    for (const u of users) {
+      if (u.podId) {
+        (usersByPod[u.podId] = usersByPod[u.podId] || []).push(u);
+      } else if (u.departmentId) {
+        (usersByDeptNoPod[u.departmentId] = usersByDeptNoPod[u.departmentId] || []).push(u);
+      } else {
+        orphans.push(u);
+      }
+    }
+    return { podsByDept, usersByPod, usersByDeptNoPod, orphans };
+  }, [pods, users]);
 
+  const canEdit = user?.role === 'project_manager';
+
+  async function createUser() {
+    if (!draft.name || !draft.employeeId) return toast.error('Employee ID and Name are required');
+    if (!agencyId) return toast.error('No agency found');
     try {
-      await axios.post(`${API}/team-members/bulk`, {
-        members: [{
-          employeeId: newMember.employeeId,
-          name: newMember.name,
-          shortName: newMember.shortName || null,
-          role: newMember.role,
-          department: newMember.department,
-          pod: newMember.pod || null
-        }]
+      const dept = departments.find(d => d.id === draft.departmentId);
+      await Users.create({
+        agencyId,
+        employeeId: draft.employeeId.trim(),
+        name: draft.name.trim(),
+        shortName: draft.shortName || null,
+        email: draft.email || null,
+        role: draft.role,
+        departmentId: draft.departmentId || null,
+        podId: draft.podId || null,
+        capacityHrsPerWeek: Number(draft.capacityHrsPerWeek) || 40,
+        billRateINR: Number(draft.billRateINR) || 0,
+        active: true,
       });
-      
-      toast.success(`${newMember.name} added to team!`);
-      setNewMember({ employeeId: '', name: '', shortName: '', role: '', department: '', pod: '' });
+      toast.success(`${draft.name} added`);
       setDialogOpen(false);
-      fetchTeam();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to add team member');
-    }
-  };
+      setDraft(emptyDraft());
+      loadAll();
+    } catch (e) { console.error(e); toast.error('Failed to add user'); }
+  }
 
-  const handleUpdateShortName = async (memberId) => {
+  async function deleteUser(u) {
+    if (!window.confirm(`Remove ${u.name}?`)) return;
     try {
-      await axios.patch(`${API}/team-members/${memberId}`, {
-        shortName: tempShortName
-      });
-      toast.success('Short name updated!');
-      setEditingShortName(null);
-      fetchTeam();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to update');
-    }
-  };
+      await Users.delete(u.id);
+      toast.success('Removed');
+      loadAll();
+    } catch (e) { console.error(e); toast.error('Failed to remove'); }
+  }
 
-  const handleEditMember = async () => {
-    if (!editingMember.employeeId || !editingMember.name || !editingMember.role || !editingMember.department) {
-      toast.error('Please fill all required fields');
-      return;
-    }
+  function initials(name) {
+    return (name || '?').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+  }
 
-    try {
-      await axios.patch(`${API}/team-members/${editingMember.id}`, {
-        employeeId: editingMember.employeeId,
-        name: editingMember.name,
-        shortName: editingMember.shortName,
-        role: editingMember.role,
-        department: editingMember.department,
-        pod: editingMember.pod || null
-      });
-      
-      toast.success(`${editingMember.name} updated!`);
-      setEditDialogOpen(false);
-      setEditingMember(null);
-      fetchTeam();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to update');
-    }
-  };
-
-  const handleDeleteMember = async (memberId, memberName) => {
-    if (!window.confirm(`Are you sure you want to remove ${memberName} from the team?`)) {
-      return;
-    }
-
-    try {
-      await axios.delete(`${API}/team-members/${memberId}`);
-      toast.success(`${memberName} removed from team`);
-      fetchTeam();
-    } catch (error) {
-      console.error('Error:', error);
-      toast.error('Failed to remove team member');
-    }
-  };
-
-  const groupedTeam = {
-    Management: team.filter(t => t.department === 'Management'),
-    'Heads of Departments': team.filter(t => t.department === 'Heads of Departments'),
-    'Operations Team': team.filter(t => t.department === 'Operations Team'),
-    'POD 1': team.filter(t => t.pod === 'POD 1'),
-    'POD 2': team.filter(t => t.pod === 'POD 2'),
-    'POD 3': team.filter(t => t.pod === 'POD 3')
-  };
+  function toggleDept(id) {
+    setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
+  }
 
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-slate-900">Team Directory</h1>
-          <p className="text-slate-600 mt-1">All team members organized by department and POD</p>
+          <p className="text-slate-600 mt-1">Departments → Pods → People</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-slate-900 hover:bg-slate-800" data-testid="add-employee-button">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Employee
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Add New Employee</DialogTitle>
-              <DialogDescription>Add a new team member to the directory</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="emp-id">Employee ID *</Label>
-                <Input
-                  id="emp-id"
-                  placeholder="EF-052"
-                  value={newMember.employeeId}
-                  onChange={(e) => setNewMember({ ...newMember, employeeId: e.target.value })}
-                  data-testid="employee-id-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emp-name">Full Name *</Label>
-                <Input
-                  id="emp-name"
-                  placeholder="John Doe"
-                  value={newMember.name}
-                  onChange={(e) => setNewMember({ ...newMember, name: e.target.value })}
-                  data-testid="employee-name-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emp-short">Short Name *</Label>
-                <Input
-                  id="emp-short"
-                  placeholder="John (used in dropdowns)"
-                  value={newMember.shortName}
-                  onChange={(e) => setNewMember({ ...newMember, shortName: e.target.value })}
-                  data-testid="employee-short-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emp-role">Role *</Label>
-                <Input
-                  id="emp-role"
-                  placeholder="Creative Strategist"
-                  value={newMember.role}
-                  onChange={(e) => setNewMember({ ...newMember, role: e.target.value })}
-                  data-testid="employee-role-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emp-dept">Department *</Label>
-                <Select value={newMember.department} onValueChange={(value) => setNewMember({ ...newMember, department: value })}>
-                  <SelectTrigger data-testid="employee-dept-select">
-                    <SelectValue placeholder="Select department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Management">Management</SelectItem>
-                    <SelectItem value="Heads of Departments">Heads of Departments</SelectItem>
-                    <SelectItem value="Operations Team">Operations Team</SelectItem>
-                    <SelectItem value="Strategy Team">Strategy Team</SelectItem>
-                    <SelectItem value="Production Team">Production Team</SelectItem>
-                    <SelectItem value="Post Production Team">Post Production Team</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="emp-pod">POD (Optional)</Label>
-                <Select value={newMember.pod} onValueChange={(value) => setNewMember({ ...newMember, pod: value })}>
-                  <SelectTrigger data-testid="employee-pod-select">
-                    <SelectValue placeholder="Select POD" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="POD 1">POD 1</SelectItem>
-                    <SelectItem value="POD 2">POD 2</SelectItem>
-                    <SelectItem value="POD 3">POD 3</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+        {canEdit && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-slate-900 hover:bg-slate-800" data-testid="add-user-button">
+                <Plus className="w-4 h-4 mr-2" />Add Employee
               </Button>
-              <Button onClick={handleAddMember} className="bg-slate-900 hover:bg-slate-800" data-testid="submit-employee-button">
-                Add Employee
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Employee</DialogTitle>
-              <DialogDescription>Update employee details</DialogDescription>
-            </DialogHeader>
-            {editingMember && (
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Employee ID *</Label>
-                  <Input
-                    value={editingMember.employeeId}
-                    onChange={(e) => setEditingMember({ ...editingMember, employeeId: e.target.value })}
-                  />
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Add Employee</DialogTitle>
+                <DialogDescription>New team member</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Employee ID *"><Input value={draft.employeeId} onChange={e => setDraft({ ...draft, employeeId: e.target.value })} placeholder="AGY-011" /></Field>
+                  <Field label="Email"><Input type="email" value={draft.email} onChange={e => setDraft({ ...draft, email: e.target.value })} placeholder="name@agency.com" /></Field>
                 </div>
-                <div className="space-y-2">
-                  <Label>Full Name *</Label>
-                  <Input
-                    value={editingMember.name}
-                    onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Full Name *"><Input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Jane Doe" /></Field>
+                  <Field label="Short Name"><Input value={draft.shortName} onChange={e => setDraft({ ...draft, shortName: e.target.value })} placeholder="Jane" /></Field>
                 </div>
-                <div className="space-y-2">
-                  <Label>Short Name</Label>
-                  <Input
-                    value={editingMember.shortName || ''}
-                    onChange={(e) => setEditingMember({ ...editingMember, shortName: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Role *</Label>
-                  <Input
-                    value={editingMember.role}
-                    onChange={(e) => setEditingMember({ ...editingMember, role: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Department *</Label>
-                  <Select value={editingMember.department} onValueChange={(value) => setEditingMember({ ...editingMember, department: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Management">Management</SelectItem>
-                      <SelectItem value="Heads of Departments">Heads of Departments</SelectItem>
-                      <SelectItem value="Operations Team">Operations Team</SelectItem>
-                      <SelectItem value="Strategy Team">Strategy Team</SelectItem>
-                      <SelectItem value="Production Team">Production Team</SelectItem>
-                      <SelectItem value="Post Production Team">Post Production Team</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>POD</Label>
-                  <Select value={editingMember.pod || 'none'} onValueChange={(value) => setEditingMember({ ...editingMember, pod: value === 'none' ? null : value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      <SelectItem value="POD 1">POD 1</SelectItem>
-                      <SelectItem value="POD 2">POD 2</SelectItem>
-                      <SelectItem value="POD 3">POD 3</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Role">
+                    <Select value={draft.role} onValueChange={(v) => setDraft({ ...draft, role: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ROLES.map(r => <SelectItem key={r} value={r}>{r.replace('_', ' ')}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Department">
+                    <Select value={draft.departmentId} onValueChange={(v) => setDraft({ ...draft, departmentId: v, podId: '' })}>
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        {departments.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Pod">
+                    <Select value={draft.podId} onValueChange={(v) => setDraft({ ...draft, podId: v })}>
+                      <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectContent>
+                        {pods.filter(p => !draft.departmentId || p.departmentId === draft.departmentId)
+                             .map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="Capacity (hrs/wk)"><Input type="number" min="0" value={draft.capacityHrsPerWeek} onChange={e => setDraft({ ...draft, capacityHrsPerWeek: e.target.value })} /></Field>
+                  <Field label="Bill rate (₹/hr)"><Input type="number" min="0" value={draft.billRateINR} onChange={e => setDraft({ ...draft, billRateINR: e.target.value })} /></Field>
                 </div>
               </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleEditMember} className="bg-slate-900 hover:bg-slate-800">
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button onClick={createUser} className="bg-slate-900 hover:bg-slate-800" data-testid="save-user-button">Add</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-slate-500">Loading...</div>
+        <div className="text-center py-12 text-slate-500">Loading…</div>
       ) : (
-        <div className="space-y-6">
-          {Object.entries(groupedTeam).map(([group, members]) => (
-            members.length > 0 && (
-              <Card key={group} className="border border-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-800 text-white">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    {group} ({members.length})
+        <div className="space-y-4">
+          {departments.map(d => {
+            const deptPods = tree.podsByDept[d.id] || [];
+            const noPodUsers = tree.usersByDeptNoPod[d.id] || [];
+            const isCollapsed = collapsed[d.id];
+            const totalInDept = noPodUsers.length + deptPods.reduce((acc, p) => acc + (tree.usersByPod[p.id]?.length || 0), 0);
+            return (
+              <Card key={d.id} className="border border-slate-200 shadow-sm" data-testid={`dept-${d.id}`}>
+                <CardHeader className="flex flex-row items-center justify-between cursor-pointer" onClick={() => toggleDept(d.id)}>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: d.color }} />
+                    {d.name}
+                    <span className="text-xs font-normal text-slate-500">{totalInDept} {totalInDept === 1 ? 'person' : 'people'}</span>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="border border-slate-200 p-3 text-left">Employee ID</th>
-                        <th className="border border-slate-200 p-3 text-left">Name</th>
-                        <th className="border border-slate-200 p-3 text-left">Short Name</th>
-                        <th className="border border-slate-200 p-3 text-left">Role</th>
-                        <th className="border border-slate-200 p-3 text-left">Department</th>
-                        <th className="border border-slate-200 p-3 text-center w-24">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {members.map((member, idx) => (
-                        <tr key={member.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                          <td className="border border-slate-200 p-3 font-mono text-xs">{member.employeeId}</td>
-                          <td className="border border-slate-200 p-3 font-semibold">{member.name}</td>
-                          <td className="border border-slate-200 p-3">
-                                <span className="text-slate-600">{member.shortName || '-'}</span>
-                          </td>
-                          <td className="border border-slate-200 p-3">{member.role}</td>
-                          <td className="border border-slate-200 p-3 text-slate-600">{member.department}</td>
-                          <td className="border border-slate-200 p-3 text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingMember(member);
-                                  setEditDialogOpen(true);
-                                }}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                data-testid={`edit-${member.id}`}
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteMember(member.id, member.name)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                data-testid={`delete-${member.id}`}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </CardContent>
+                {!isCollapsed && (
+                  <CardContent className="space-y-4">
+                    {deptPods.map(p => (
+                      <PodBlock key={p.id} pod={p} members={tree.usersByPod[p.id] || []} initials={initials} canEdit={canEdit} onDelete={deleteUser} />
+                    ))}
+                    {noPodUsers.length > 0 && (
+                      <div>
+                        <p className="text-xs text-slate-500 uppercase tracking-wide mb-2 ml-6">No pod</p>
+                        <UserGrid members={noPodUsers} initials={initials} canEdit={canEdit} onDelete={deleteUser} />
+                      </div>
+                    )}
+                    {totalInDept === 0 && <p className="text-xs text-slate-500 ml-6">No one in this department yet.</p>}
+                  </CardContent>
+                )}
               </Card>
-            )
-          ))}
+            );
+          })}
+          {tree.orphans.length > 0 && (
+            <Card className="border border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Unassigned (no department)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UserGrid members={tree.orphans} initials={initials} canEdit={canEdit} onDelete={deleteUser} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function PodBlock({ pod, members, initials, canEdit, onDelete }) {
+  return (
+    <div className="border border-slate-100 rounded-md p-3 bg-slate-50/50">
+      <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-2">
+        <Building className="w-3 h-3" />{pod.name}
+        <span className="text-slate-500 font-normal">({members.length})</span>
+      </p>
+      {members.length === 0 ? (
+        <p className="text-xs text-slate-500">Empty pod.</p>
+      ) : (
+        <UserGrid members={members} initials={initials} canEdit={canEdit} onDelete={onDelete} />
+      )}
+    </div>
+  );
+}
+
+function UserGrid({ members, initials, canEdit, onDelete }) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+      {members.map(u => (
+        <div key={u.id} className="flex items-center gap-3 bg-white border border-slate-200 rounded-md p-2.5" data-testid={`user-${u.id}`}>
+          <Avatar className="w-9 h-9 shrink-0">
+            <AvatarFallback className="bg-slate-900 text-white text-xs">{initials(u.name)}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-slate-900 truncate">{u.name}</p>
+            <p className="text-xs text-slate-500 truncate">{u.role.replace('_', ' ')} · {u.employeeId}</p>
+          </div>
+          {canEdit && (
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:bg-red-50" onClick={() => onDelete(u)}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium text-slate-700">{label}</Label>
+      {children}
     </div>
   );
 }

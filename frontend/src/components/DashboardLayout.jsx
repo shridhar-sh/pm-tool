@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList, CalendarDays, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,6 +14,7 @@ function DashboardLayout({ user, onLogout, children }) {
   const getNavigationForRole = (role) => {
     const allNavItems = {
       dashboard: { name: 'Dashboard', icon: LayoutDashboard, path: '/' },
+      clients: { name: 'Clients', icon: Building2, path: '/clients' },
       amTracker: { name: 'AM Tracker', icon: ClipboardList, path: '/am-tracker' },
       myTasks: { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
       projectManagement: { name: 'Project Management', icon: Calendar, path: '/project-management' },
@@ -26,6 +27,7 @@ function DashboardLayout({ user, onLogout, children }) {
         // PM: Full access - all navigation items
         return [
           allNavItems.dashboard,
+          allNavItems.clients,
           allNavItems.amTracker,
           allNavItems.myTasks,
           allNavItems.projectManagement,
@@ -33,9 +35,10 @@ function DashboardLayout({ user, onLogout, children }) {
           allNavItems.holidays,
         ];
       case 'account_manager':
-        // AM: Dashboard, AM Tracker, My Tasks
+        // AM: Dashboard, Clients, AM Tracker, My Tasks
         return [
           allNavItems.dashboard,
+          allNavItems.clients,
           allNavItems.amTracker,
           allNavItems.myTasks,
         ];

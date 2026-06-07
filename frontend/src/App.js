@@ -15,6 +15,9 @@ import TeamDashboard from '@/pages/TeamDashboard';
 import TeamDirectory from '@/pages/TeamDirectory';
 import ProjectDetail from '@/pages/ProjectDetail';
 import HolidayManagement from '@/pages/HolidayManagement';
+import Clients from '@/pages/Clients';
+import ClientDetail from '@/pages/ClientDetail';
+import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -36,7 +39,7 @@ const ProtectedRoute = ({ user, allowedRoles, children, onLogout }) => {
   
   return (
     <DashboardLayout user={user} onLogout={onLogout}>
-      {children}
+      <PageErrorBoundary>{children}</PageErrorBoundary>
     </DashboardLayout>
   );
 };
@@ -94,10 +97,12 @@ function App() {
             element={
               user ? (
                 <DashboardLayout user={user} onLogout={handleLogout}>
-                  {user.role === ROLES.PM && <Dashboard user={user} />}
-                  {user.role === ROLES.AM && <AMDashboard user={user} />}
-                  {user.role === ROLES.LP && <LPDashboard user={user} />}
-                  {user.role === ROLES.TEAM && <TeamDashboard user={user} />}
+                  <PageErrorBoundary>
+                    {user.role === ROLES.PM && <Dashboard user={user} />}
+                    {user.role === ROLES.AM && <AMDashboard user={user} />}
+                    {user.role === ROLES.LP && <LPDashboard user={user} />}
+                    {user.role === ROLES.TEAM && <TeamDashboard user={user} />}
+                  </PageErrorBoundary>
                 </DashboardLayout>
               ) : (
                 <Navigate to="/login" />
@@ -189,6 +194,32 @@ function App() {
             }
           />
           
+          {/* Clients list & detail - PM and AM */}
+          <Route
+            path="/clients"
+            element={
+              <ProtectedRoute
+                user={user}
+                allowedRoles={[ROLES.PM, ROLES.AM]}
+                onLogout={handleLogout}
+              >
+                <Clients user={user} />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/clients/:id"
+            element={
+              <ProtectedRoute
+                user={user}
+                allowedRoles={[ROLES.PM, ROLES.AM]}
+                onLogout={handleLogout}
+              >
+                <ClientDetail user={user} />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Project Detail - All roles can view their assigned projects */}
           <Route
             path="/project/:id"
