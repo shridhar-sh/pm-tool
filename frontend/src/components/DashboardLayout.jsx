@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList, CalendarDays, Building2 } from 'lucide-react';
+import { LayoutDashboard, LogOut, Menu, Briefcase, ListTodo, Users, Calendar, ClipboardList, CalendarDays, Building2, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,7 @@ function DashboardLayout({ user, onLogout, children }) {
       amTracker: { name: 'AM Tracker', icon: ClipboardList, path: '/am-tracker' },
       myTasks: { name: 'My Tasks', icon: ListTodo, path: '/my-tasks' },
       projectManagement: { name: 'Project Management', icon: Calendar, path: '/project-management' },
+      capacity: { name: 'Capacity', icon: Activity, path: '/capacity' },
       teamDirectory: { name: 'Team Directory', icon: Users, path: '/team-directory' },
       holidays: { name: 'Holidays', icon: CalendarDays, path: '/holidays' },
     };
@@ -31,6 +32,7 @@ function DashboardLayout({ user, onLogout, children }) {
           allNavItems.amTracker,
           allNavItems.myTasks,
           allNavItems.projectManagement,
+          allNavItems.capacity,
           allNavItems.teamDirectory,
           allNavItems.holidays,
         ];
@@ -43,11 +45,12 @@ function DashboardLayout({ user, onLogout, children }) {
           allNavItems.myTasks,
         ];
       case 'line_producer':
-        // LP: Dashboard, My Tasks, Project Management (for production schedules)
+        // LP: Dashboard, My Tasks, Project Management, Capacity
         return [
           allNavItems.dashboard,
           allNavItems.myTasks,
           allNavItems.projectManagement,
+          allNavItems.capacity,
         ];
       case 'team_member':
         // Team Member: Dashboard, My Tasks only

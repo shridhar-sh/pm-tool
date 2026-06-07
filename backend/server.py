@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 import db
+from routers import capacity as capacity_router
 from routers import holidays as holidays_router
 from routers import org as org_router
 from routers import projects as projects_router
@@ -58,6 +59,7 @@ api.include_router(org_router.router,       tags=["org"])
 api.include_router(projects_router.router,  tags=["projects"])
 api.include_router(tasks_router.router,     tags=["tasks"])
 api.include_router(rounds_router.router,    tags=["rounds"])
+api.include_router(capacity_router.router,  tags=["capacity"])
 api.include_router(holidays_router.router,  tags=["holidays"])
 
 

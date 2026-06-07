@@ -18,6 +18,7 @@ import HolidayManagement from '@/pages/HolidayManagement';
 import Clients from '@/pages/Clients';
 import ClientDetail from '@/pages/ClientDetail';
 import PublicApproval from '@/pages/PublicApproval';
+import Capacity from '@/pages/Capacity';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -220,6 +221,20 @@ function App() {
                 onLogout={handleLogout}
               >
                 <ClientDetail user={user} />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Capacity heatmap - PM and LP */}
+          <Route
+            path="/capacity"
+            element={
+              <ProtectedRoute
+                user={user}
+                allowedRoles={[ROLES.PM, ROLES.LP]}
+                onLogout={handleLogout}
+              >
+                <Capacity user={user} />
               </ProtectedRoute>
             }
           />

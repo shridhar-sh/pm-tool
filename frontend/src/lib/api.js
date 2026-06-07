@@ -158,6 +158,15 @@ export const Approvals = {
   decideByToken:  (token, body) => post(`/public/approvals/${token}/decide`, body),
 };
 
+// ---------- Capacity ----------
+export const Capacity = {
+  /**
+   * Per-user weekly load. Params: {agencyId, from, to, podId, role, weeks}.
+   * Returns {from, to, weekStarts[], rows[]}.
+   */
+  get: (params) => get('/capacity', params),
+};
+
 // ---------- Holidays ----------
 export const Holidays = {
   list:   (agencyId) => get('/holidays', { agencyId }),
