@@ -30,7 +30,7 @@ from routers.holidays import HOLIDAYS_2026
 V2_COLLECTIONS = [
     "agencies", "departments", "pods", "users", "clients",
     "projects", "campaigns", "deliverables",
-    "phases", "tasks", "subtasks", "approvals", "holidays",
+    "phases", "tasks", "subtasks", "approvals", "rounds", "holidays",
 ]
 
 
@@ -346,6 +346,23 @@ async def run(wipe: bool = True) -> Dict:
     }
     await db.tasks().insert_one(t_edit)
 
+    # ---------- Creative round (under Static Key Visual) ----------
+    sample_round_id = _id()
+    await db.rounds().insert_one({
+        "id": sample_round_id,
+        "createdAt": _now(),
+        "deliverableId": deliv_ids["Static Key Visual"],
+        "roundNumber": 1,
+        "status": "draft",
+        "notes": "First pass at the key visual. Upload PNG/JPG variants here.",
+        "files": [],
+        "internalReviewerUserIds": [pm],
+        "clientApprovalId": None,
+        "internalApprovalId": None,
+        "clientMagicLinkToken": None,
+        "createdByUserId": strat1,
+    })
+
     # ---------- Approvals ----------
     # 1) internal approval — strategy lead reviews concept routes
     await db.approvals().insert_one({
@@ -402,6 +419,7 @@ async def run(wipe: bool = True) -> Dict:
             "tasks": 5,
             "subtasks": len(subtasks_for_prep),
             "approvals": 2,
+            "rounds": 1,
             "holidays": len(holiday_docs),
         },
         "demo_logins": [

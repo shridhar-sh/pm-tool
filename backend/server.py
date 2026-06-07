@@ -11,13 +11,16 @@ import os
 from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 
 import db
 from routers import holidays as holidays_router
 from routers import org as org_router
 from routers import projects as projects_router
+from routers import rounds as rounds_router
 from routers import tasks as tasks_router
+from storage import ensure_upload_dir
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,6 +31,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    ensure_upload_dir()
     await db.ensure_indexes()
     logger.info("AgencyPM v2 backend ready")
     yield
@@ -53,6 +57,7 @@ async def health():
 api.include_router(org_router.router,       tags=["org"])
 api.include_router(projects_router.router,  tags=["projects"])
 api.include_router(tasks_router.router,     tags=["tasks"])
+api.include_router(rounds_router.router,    tags=["rounds"])
 api.include_router(holidays_router.router,  tags=["holidays"])
 
 
@@ -74,6 +79,11 @@ async def wipe_collections():
 
 
 app.include_router(api)
+
+# Serve uploaded assets so the frontend can render images/videos inline.
+# Mounted under /files (not /api/files) so it sits next to the API surface
+# but isn't subject to /api prefixing.
+app.mount("/files", StaticFiles(directory=str(ensure_upload_dir())), name="files")
 
 app.add_middleware(
     CORSMiddleware,

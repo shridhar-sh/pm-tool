@@ -19,6 +19,7 @@ import {
   Projects, Clients as ClientsApi, Users as UsersApi,
   Campaigns, Deliverables, Phases, Tasks, Subtasks, Approvals,
 } from '@/lib/api';
+import RoundsDrawer from '@/components/RoundsDrawer';
 
 const TASK_STATUS_STYLES = {
   todo:         'bg-slate-50 text-slate-700 border-slate-200',
@@ -47,6 +48,7 @@ export default function ProjectDetail({ user }) {
   const [project, setProject] = useState(null);
   const [client, setClient] = useState(null);
   const [usersById, setUsersById] = useState({});
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
   const [deliverables, setDeliverables] = useState([]);
   const [phases, setPhases] = useState([]);
@@ -72,7 +74,12 @@ export default function ProjectDetail({ user }) {
         Approvals.forProject(id),
       ]);
       setClient(c);
-      setUsersById(Object.fromEntries(allUsers.map(u => [u.id, u])));
+      const byId = Object.fromEntries(allUsers.map(u => [u.id, u]));
+      setUsersById(byId);
+      // Resolve the logged-in user's id from their email (demo auth only
+      // carries email + name in localStorage).
+      const me = user?.email ? allUsers.find(u => u.email === user.email) : null;
+      setCurrentUserId(me?.id || null);
       setCampaigns(camps);
       setDeliverables(delivs);
       setPhases(phs);
@@ -172,6 +179,7 @@ export default function ProjectDetail({ user }) {
           <DeliverablesTab
             project={project} deliverables={deliverables} campaigns={campaigns}
             usersById={usersById} canEdit={canEdit} onChanged={loadAll}
+            currentUserId={currentUserId}
           />
         </TabsContent>
 
@@ -524,9 +532,10 @@ function CampaignsTab({ project, campaigns, canEdit, onChanged }) {
 
 // ---------- Deliverables tab ----------
 
-function DeliverablesTab({ project, deliverables, campaigns, usersById, canEdit, onChanged }) {
+function DeliverablesTab({ project, deliverables, campaigns, usersById, canEdit, onChanged, currentUserId }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [draft, setDraft] = useState({ name: '', type: 'video', dueDate: '', campaignId: '', ownerUserId: '', status: 'todo' });
+  const [roundsFor, setRoundsFor] = useState(null);   // deliverable | null
   const users = Object.values(usersById);
 
   async function create() {
@@ -620,6 +629,7 @@ function DeliverablesTab({ project, deliverables, campaigns, usersById, canEdit,
                   <th className="text-left p-3">Owner</th>
                   <th className="text-left p-3">Due</th>
                   <th className="text-left p-3">Status</th>
+                  <th className="text-left p-3">Rounds</th>
                 </tr>
               </thead>
               <tbody>
@@ -635,12 +645,29 @@ function DeliverablesTab({ project, deliverables, campaigns, usersById, canEdit,
                         {d.status?.replace('_', ' ')}
                       </Badge>
                     </td>
+                    <td className="p-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setRoundsFor(d)}
+                        data-testid={`open-rounds-${d.id}`}
+                      >
+                        Rounds
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+
+        <RoundsDrawer
+          open={!!roundsFor}
+          onOpenChange={(o) => !o && setRoundsFor(null)}
+          deliverable={roundsFor}
+          currentUserId={currentUserId}
+        />
       </CardContent>
     </Card>
   );

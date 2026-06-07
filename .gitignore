@@ -52,6 +52,9 @@ __pycache__/
 venv/
 .venv/
 
+# Local uploads (creative round assets) — never commit user content
+backend/uploads/
+
 # Development tools
 chainlit.md
 .chainlit

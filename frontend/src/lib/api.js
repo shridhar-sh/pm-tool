@@ -112,6 +112,40 @@ export const Subtasks = {
   delete:      (id)       => del(`/subtasks/${id}`),
 };
 
+// ---------- Creative Rounds ----------
+export const Rounds = {
+  listForDeliverable: (deliverableId) => get(`/deliverables/${deliverableId}/rounds`),
+  get:                (id)            => get(`/rounds/${id}`),
+  create:             (body)          => post('/rounds', body),
+  update:             (id, p)         => patch(`/rounds/${id}`, p),
+  delete:             (id)            => del(`/rounds/${id}`),
+  sendToClient:       (id, body)      => post(`/rounds/${id}/send-to-client`, body),
+
+  /**
+   * Upload a File (browser File object) to a round as multipart/form-data.
+   * Returns the updated CreativeRound.
+   */
+  uploadFile: (roundId, file, uploadedByUserId) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (uploadedByUserId) form.append('uploadedByUserId', uploadedByUserId);
+    return http
+      .post(`/rounds/${roundId}/files`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then(r => r.data);
+  },
+
+  deleteFile: (roundId, fileId) => del(`/rounds/${roundId}/files/${fileId}`),
+};
+
+/** Absolute URL for an attachment whose `url` is relative (/files/...). */
+export function fileUrl(relUrl) {
+  if (!relUrl) return '';
+  if (/^https?:\/\//.test(relUrl)) return relUrl;
+  return `${BACKEND_URL}${relUrl}`;
+}
+
 // ---------- Approvals ----------
 export const Approvals = {
   list:           (params)     => get('/approvals', params),

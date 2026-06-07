@@ -384,6 +384,66 @@ class SubtaskUpdate(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Creative rounds + attachments
+# ---------------------------------------------------------------------------
+
+class Attachment(BaseModel):
+    """File metadata. Lives inside a CreativeRound's files[] array."""
+    id: str = Field(default_factory=_uuid)
+    name: str
+    url: str                        # /files/<stored_filename> (local) or s3://...
+    sizeBytes: int = 0
+    mimeType: Optional[str] = None
+    uploadedByUserId: Optional[str] = None
+    uploadedAt: str = Field(default_factory=_now_iso)
+
+
+# Round statuses:
+#   draft               - assets being prepared
+#   internal_review     - sent for internal sign-off
+#   client_review       - magic-link sent, awaiting client decision
+#   approved            - client approved (terminal)
+#   revisions_requested - client wants changes; next round will follow
+ROUND_STATUSES = ("draft", "internal_review", "client_review",
+                  "approved", "revisions_requested")
+
+
+class CreativeRound(_Base):
+    deliverableId: str
+    roundNumber: int                # 1, 2, 3, ... displayed as R1, R2, R3
+    status: str = "draft"
+    notes: Optional[str] = None
+    files: List[Attachment] = Field(default_factory=list)
+    internalReviewerUserIds: List[str] = Field(default_factory=list)
+    # Linked approval ids — set when send-to-client fires:
+    clientApprovalId: Optional[str] = None
+    internalApprovalId: Optional[str] = None
+    # The client review URL token, mirrored here so the internal UI can build
+    # the magic link without round-tripping to /api/approvals.
+    clientMagicLinkToken: Optional[str] = None
+    createdByUserId: Optional[str] = None
+
+
+class CreativeRoundCreate(BaseModel):
+    deliverableId: str
+    roundNumber: Optional[int] = None  # auto-assigned if None
+    notes: Optional[str] = None
+    internalReviewerUserIds: List[str] = Field(default_factory=list)
+    createdByUserId: Optional[str] = None
+
+
+class CreativeRoundUpdate(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+    internalReviewerUserIds: Optional[List[str]] = None
+
+
+class SendToClientBody(BaseModel):
+    requesterUserId: str
+    note: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
 # Approvals (internal review + client magic-link)
 # ---------------------------------------------------------------------------
 

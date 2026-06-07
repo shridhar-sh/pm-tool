@@ -17,6 +17,7 @@ import ProjectDetail from '@/pages/ProjectDetail';
 import HolidayManagement from '@/pages/HolidayManagement';
 import Clients from '@/pages/Clients';
 import ClientDetail from '@/pages/ClientDetail';
+import PublicApproval from '@/pages/PublicApproval';
 import PageErrorBoundary from '@/components/PageErrorBoundary';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -86,6 +87,9 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
+          {/* Public client review — outside auth + layout */}
+          <Route path="/r/:token" element={<PublicApproval />} />
+
           <Route
             path="/login"
             element={!user ? <Login onLogin={handleLogin} /> : <Navigate to="/" />}

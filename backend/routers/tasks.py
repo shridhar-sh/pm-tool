@@ -214,4 +214,14 @@ async def decide_via_magic_link(token: str, decision: ApprovalDecision):
         "note": decision.note,
     }
     await db.approvals().update_one({"id": doc["id"]}, {"$set": update})
+
+    # If the subject is a creative round, flip its status too so the
+    # internal UI immediately reflects the client decision.
+    if doc.get("subjectType") == "creative_round":
+        round_status = "approved" if decision.decision == "approved" else "revisions_requested"
+        await db.rounds().update_one(
+            {"id": doc["subjectId"]},
+            {"$set": {"status": round_status}},
+        )
+
     return await db.approvals().find_one({"id": doc["id"]}, {"_id": 0})
