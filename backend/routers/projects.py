@@ -14,6 +14,7 @@ from models import (
     Deliverable, DeliverableCreate,
     Phase, PhaseCreate,
 )
+from scheduling import schedule_project
 
 router = APIRouter()
 
@@ -82,6 +83,36 @@ async def delete_project(project_id: str):
     await db.tasks().delete_many({"projectId": project_id})
     await db.approvals().delete_many({"projectId": project_id})
     return {"deleted": True}
+
+
+@router.get("/projects/{project_id}/schedule")
+async def get_schedule(project_id: str):
+    """
+    Return a resolved schedule for the project:
+      - effective start/end for every task (respecting dependsOnTaskIds
+        and skipping non-working days)
+      - critical path (the longest finishing chain)
+      - holiday strip for the Gantt to draw stripes over
+
+    The frontend Gantt consumes this verbatim.
+    """
+    proj = await db.projects().find_one({"id": project_id}, {"_id": 0})
+    if not proj:
+        raise HTTPException(404, "Project not found")
+
+    phases = await db.phases().find(
+        {"projectId": project_id}, {"_id": 0}
+    ).sort("order", 1).to_list(500)
+    tasks = await db.tasks().find(
+        {"projectId": project_id}, {"_id": 0}
+    ).to_list(5000)
+
+    q = {}
+    if proj.get("agencyId"):
+        q = {"$or": [{"agencyId": proj["agencyId"]}, {"agencyId": None}]}
+    holidays = await db.holidays().find(q, {"_id": 0}).to_list(1000)
+
+    return schedule_project(proj, phases, tasks, holidays)
 
 
 @router.patch("/projects/{project_id}/stages/{stage_index}")

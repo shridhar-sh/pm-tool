@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Calendar, Users as UsersIcon, Plus, CheckCircle, Circle,
   Layers, FilmIcon, Film, ListChecks, ShieldCheck, MessageSquare,
+  CalendarRange,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,8 +19,10 @@ import { toast } from 'sonner';
 import {
   Projects, Clients as ClientsApi, Users as UsersApi,
   Campaigns, Deliverables, Phases, Tasks, Subtasks, Approvals,
+  Departments,
 } from '@/lib/api';
 import RoundsDrawer from '@/components/RoundsDrawer';
+import Gantt from '@/components/Gantt';
 
 const TASK_STATUS_STYLES = {
   todo:         'bg-slate-50 text-slate-700 border-slate-200',
@@ -158,6 +161,7 @@ export default function ProjectDetail({ user }) {
       <Tabs defaultValue="phases" className="w-full">
         <TabsList className="bg-white border border-slate-200">
           <TabsTrigger value="phases" data-testid="tab-phases"><Layers className="w-4 h-4 mr-2" />Phases & Tasks</TabsTrigger>
+          <TabsTrigger value="timeline" data-testid="tab-timeline"><CalendarRange className="w-4 h-4 mr-2" />Timeline</TabsTrigger>
           <TabsTrigger value="campaigns" data-testid="tab-campaigns"><FilmIcon className="w-4 h-4 mr-2" />Campaigns</TabsTrigger>
           <TabsTrigger value="deliverables" data-testid="tab-deliverables"><Film className="w-4 h-4 mr-2" />Deliverables</TabsTrigger>
           <TabsTrigger value="approvals" data-testid="tab-approvals"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</TabsTrigger>
@@ -169,6 +173,10 @@ export default function ProjectDetail({ user }) {
             subtasksByTask={subtasksByTask} usersById={usersById} canEdit={canEdit}
             onChanged={loadAll}
           />
+        </TabsContent>
+
+        <TabsContent value="timeline" className="mt-4">
+          <TimelineTab project={project} />
         </TabsContent>
 
         <TabsContent value="campaigns" className="mt-4">
@@ -448,6 +456,63 @@ function PhasesTab({ project, phases, tasksByPhase, subtasksByTask, usersById, c
         </Dialog>
       </CardContent>
     </Card>
+  );
+}
+
+// ---------- Timeline tab ----------
+
+function TimelineTab({ project }) {
+  const [schedule, setSchedule] = useState(null);
+  const [departmentsById, setDepartmentsById] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState(null);
+
+  useEffect(() => { (async () => {
+    setLoading(true);
+    setErr(null);
+    try {
+      const [s, depts] = await Promise.all([
+        Projects.schedule(project.id),
+        Departments.list(project.agencyId).catch(() => []),
+      ]);
+      setSchedule(s);
+      setDepartmentsById(Object.fromEntries(depts.map(d => [d.id, d])));
+    } catch (e) {
+      console.error(e);
+      setErr(e?.response?.data?.detail || 'Failed to load schedule');
+    } finally {
+      setLoading(false);
+    }
+  })(); }, [project.id, project.agencyId]);
+
+  if (loading) {
+    return <Card className="border border-slate-200 shadow-sm"><CardContent className="py-12 text-center text-slate-500">Computing schedule…</CardContent></Card>;
+  }
+  if (err) {
+    return <Card className="border border-red-200 shadow-sm"><CardContent className="py-12 text-center text-red-700">{err}</CardContent></Card>;
+  }
+  if (!schedule || !schedule.tasks?.length) {
+    return (
+      <Card className="border border-slate-200 shadow-sm">
+        <CardContent className="py-12 text-center text-slate-500">
+          No tasks scheduled yet. Add phases + tasks in the Phases & Tasks tab to see them here.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-slate-600">
+        <div>
+          Span: <span className="font-mono">{schedule.projectStart} → {schedule.projectEnd}</span>
+        </div>
+        <div>
+          {schedule.tasks.length} tasks · {schedule.criticalPath.length} on critical path · {schedule.holidays.length} holiday{schedule.holidays.length === 1 ? '' : 's'} in window
+        </div>
+      </div>
+      <Gantt schedule={schedule} departmentsById={departmentsById} />
+    </div>
   );
 }
 

@@ -66,6 +66,7 @@ export const Projects = {
   update:      (id, p)             => patch(`/projects/${id}`, p),
   delete:      (id)                => del(`/projects/${id}`),
   updateStage: (id, idx, p)        => patch(`/projects/${id}/stages/${idx}`, p),
+  schedule:    (id)                => get(`/projects/${id}/schedule`),
 };
 
 // ---------- Campaigns ----------
