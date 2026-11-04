@@ -97,9 +97,9 @@ export default function PMDashboardNew({ user }) {
 
   const handleProjectUpdate = async (projectId, updates) => {
     try {
-      await axios.patch(`${API}/projects/${projectId}`, updates);
+      const response = await axios.patch(`${API}/projects/${projectId}`, updates);
       const updatedProjects = projects.map(p => 
-        p.id === projectId ? { ...p, ...updates } : p
+        p.id === projectId ? response.data : p
       );
       setProjects(updatedProjects);
       setSelectedProject(updatedProjects.find(p => p.id === projectId));
@@ -360,3 +360,4 @@ export default function PMDashboardNew({ user }) {
     </div>
   );
 }
+

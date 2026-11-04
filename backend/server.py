@@ -79,15 +79,19 @@ class Project(BaseModel):
     assignedLP: Optional[str] = None
     pod: Optional[str] = "POD 1"
     workflowStages: List[Dict] = []
+    extraDayMarkers: Dict[str, bool] = Field(default_factory=dict)
+    extraDayVisual: Dict[str, bool] = Field(default_factory=dict)
+    workingDays: Dict[str, bool] = Field(default_factory=dict)
+    workingDaysVisual: Dict[str, bool] = Field(default_factory=dict)
+    stageOverlaps: Dict[str, int] = Field(default_factory=dict)
     createdBy: Optional[str] = None
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
-class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    statusCategory: Optional[str] = None
-    extraDays: Optional[int] = None
-    workflowStages: Optional[List[Dict]] = None
+if __package__:
+    from .project_models import ProjectUpdate
+else:
+    from project_models import ProjectUpdate
 
 
 class TeamMember(BaseModel):
@@ -219,7 +223,7 @@ async def update_stage(project_id: str, stage_index: int, update: StageUpdate):
         raise HTTPException(status_code=404, detail="Project not found")
     
     stages = project.get("workflowStages", [])
-    if stage_index >= len(stages):
+    if stage_index < 0 or stage_index >= len(stages):
         raise HTTPException(status_code=404, detail="Stage not found")
     
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
@@ -387,3 +391,4 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
