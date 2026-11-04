@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { matchesAssignee } from '@/lib/assignees';
+import useLiveRefresh from '@/hooks/useLiveRefresh';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Video, MapPin, Users, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function LPDashboard({ user }) {
@@ -14,14 +16,14 @@ export default function LPDashboard({ user }) {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
+  useLiveRefresh(() => fetchProjects(), user.name);
+
+
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get(`${API}/projects`);
-      const myProjects = response.data.filter(p => p.assignedLP === user.name);
+      const [response, team] = await Promise.all([axios.get(`${API}/projects`), axios.get(`${API}/team-members`)]);
+      const myProjects = response.data.filter(p => matchesAssignee(p.assignedLP, user, team.data));
       setProjects(myProjects);
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -44,7 +46,7 @@ export default function LPDashboard({ user }) {
   };
 
   const inProduction = projects.filter(p => p.statusCategory === 'production');
-  const inPostProduction = projects.filter(p => p.statusCategory === 'edits');
+  const inPostProduction = projects.filter(p => ['post_production', 'correction_ongoing'].includes(p.statusCategory));
 
   return (
     <div className="p-6 md:p-8 space-y-6">
@@ -139,3 +141,4 @@ export default function LPDashboard({ user }) {
     </div>
   );
 }
+

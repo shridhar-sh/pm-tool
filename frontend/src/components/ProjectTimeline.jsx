@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function ProjectTimeline({ project, onUpdate }) {
@@ -31,6 +31,15 @@ export default function ProjectTimeline({ project, onUpdate }) {
   const [workingDaysVisual, setWorkingDaysVisual] = useState({}); // For display (cell-specific)
   // Stage overlap: { stageIdx: -1 } means start 1 day earlier (overlap with previous stage)
   const [stageOverlaps, setStageOverlaps] = useState({});
+
+  // Restore persisted controls whenever the server returns a project snapshot.
+  useEffect(() => {
+    setExtraDayMarkers(project?.extraDayMarkers || {});
+    setExtraDayVisual(project?.extraDayVisual || {});
+    setWorkingDays(project?.workingDays || {});
+    setWorkingDaysVisual(project?.workingDaysVisual || {});
+    setStageOverlaps(project?.stageOverlaps || {});
+  }, [project]);
 
   // Fetch holidays on mount
   useEffect(() => {
@@ -164,10 +173,29 @@ export default function ProjectTimeline({ project, onUpdate }) {
   }, []);
 
   // Auto-calculate stage dates based on duration, extra days, non-working days, and overlaps
-  const autoCalculateStageDates = useCallback((workflowStages, extraMarkers = {}, overlaps = {}) => {
+  const autoCalculateStageDates = useCallback((workflowStages, extraMarkers = {}, overlaps = {}, workingOverrides = workingDays) => {
     if (!project?.projectStartDate || !workflowStages?.length) return workflowStages;
     
     try {
+      const nonWorking = (date) => {
+        const key = format(date, 'yyyy-MM-dd');
+        const holiday = holidays.find(h => h.date === key);
+        if (workingOverrides[key] || holiday?.isWorking) return false;
+        return isWeekend(date) || Boolean(holiday && !holiday.isWorking);
+      };
+      const nextWorking = (date) => {
+        let current = date;
+        while (nonWorking(current)) current = addDays(current, 1);
+        return current;
+      };
+      const addWorking = (start, days) => {
+        let current = nextWorking(start);
+        for (let count = 1; count < days;) {
+          current = addDays(current, 1);
+          if (!nonWorking(current)) count++;
+        }
+        return current;
+      };
       const updatedStages = workflowStages.map(s => ({ ...s, extraDays: 0 }));
       
       // First pass: count extra day markers for each stage using DATE-BASED logic
@@ -179,7 +207,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
       });
       
       // Second pass: calculate dates with overlap support
-      let currentDate = getNextWorkingDay(parseISO(project.projectStartDate));
+      let currentDate = nextWorking(parseISO(project.projectStartDate));
       
       updatedStages.forEach((stage, idx) => {
         // Check if this stage has overlap with previous stage
@@ -191,7 +219,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
           for (let i = 0; i < Math.abs(overlapDays); i++) {
             overlapDate = addDays(overlapDate, -1);
             // Skip non-working days going backwards
-            while (isNonWorkingDay(overlapDate)) {
+            while (nonWorking(overlapDate)) {
               overlapDate = addDays(overlapDate, -1);
             }
           }
@@ -206,10 +234,10 @@ export default function ProjectTimeline({ project, onUpdate }) {
         
         if (totalDays > 0) {
           const startDateParsed = parseISO(stage.startDate);
-          const endDate = addWorkingDays(startDateParsed, totalDays);
+          const endDate = addWorking(startDateParsed, totalDays);
           stage.endDate = format(endDate, 'yyyy-MM-dd');
           // Next stage starts the next working day after this stage ends (unless overlap)
-          currentDate = getNextWorkingDay(addDays(endDate, 1));
+          currentDate = nextWorking(addDays(endDate, 1));
         } else {
           stage.endDate = null;
         }
@@ -220,7 +248,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
       console.error('Error auto-calculating dates:', err);
       return workflowStages;
     }
-  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays, isNonWorkingDay]);
+  }, [project?.projectStartDate, findStageForExtraDay, workingDays, holidays, isWeekend]);
 
   // Initialize stages when project changes
   useEffect(() => {
@@ -252,6 +280,11 @@ export default function ProjectTimeline({ project, onUpdate }) {
       
       if (onUpdate) {
         onUpdate({ 
+          extraDayMarkers,
+          extraDayVisual,
+          workingDays,
+          workingDaysVisual,
+          stageOverlaps,
           workflowStages: recalculatedStages,
           projectEndDate: projectEndDate
         });
@@ -284,6 +317,11 @@ export default function ProjectTimeline({ project, onUpdate }) {
     
     if (onUpdate) {
       onUpdate({ 
+        extraDayMarkers,
+        extraDayVisual,
+        workingDays,
+        workingDaysVisual,
+        stageOverlaps: newOverlaps,
         workflowStages: recalculatedStages,
         projectEndDate: projectEndDate
       });
@@ -322,8 +360,16 @@ export default function ProjectTimeline({ project, onUpdate }) {
       setWorkingDaysVisual(newWorkingDaysVisual);
       
       // Recalculate stages
-      const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers);
+      const recalculatedStages = autoCalculateStageDates(stages, extraDayMarkers, stageOverlaps, newWorkingDays);
       setStages(recalculatedStages);
+      const lastStage = recalculatedStages[recalculatedStages.length - 1];
+      onUpdate?.({
+        extraDayMarkers, extraDayVisual, stageOverlaps,
+        workingDays: newWorkingDays,
+        workingDaysVisual: newWorkingDaysVisual,
+        workflowStages: recalculatedStages,
+        projectEndDate: lastStage?.endDate || lastStage?.startDate || project.projectEndDate,
+      });
       return;
     }
     
@@ -349,7 +395,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
     setExtraDayVisual(newVisual);
     
     // Recalculate stages with new markers
-    const recalculatedStages = autoCalculateStageDates(stages, newMarkers);
+    const recalculatedStages = autoCalculateStageDates(stages, newMarkers, stageOverlaps);
     setStages(recalculatedStages);
     
     // Calculate project end date from last stage
@@ -358,6 +404,11 @@ export default function ProjectTimeline({ project, onUpdate }) {
     
     if (onUpdate) {
       onUpdate({ 
+        extraDayMarkers: newMarkers,
+        extraDayVisual: newVisual,
+        workingDays,
+        workingDaysVisual,
+        stageOverlaps,
         workflowStages: recalculatedStages,
         projectEndDate: projectEndDate
       });
@@ -689,3 +740,4 @@ export default function ProjectTimeline({ project, onUpdate }) {
     </TooltipProvider>
   );
 }
+

@@ -11,7 +11,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { format, parseISO, getDay } from 'date-fns';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function HolidayManagement({ user }) {
@@ -61,7 +61,7 @@ export default function HolidayManagement({ user }) {
         name: newHoliday.name,
         dayOfWeek: getDayOfWeek(newHoliday.date)
       });
-      
+
       toast.success(`${newHoliday.name} added!`);
       setNewHoliday({ date: '', name: '' });
       setDialogOpen(false);
@@ -84,7 +84,7 @@ export default function HolidayManagement({ user }) {
         name: editingHoliday.name,
         dayOfWeek: getDayOfWeek(editingHoliday.date)
       });
-      
+
       toast.success('Holiday updated!');
       setEditDialogOpen(false);
       setEditingHoliday(null);

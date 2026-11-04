@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import useLiveRefresh from '@/hooks/useLiveRefresh';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function TeamDashboard({ user }) {
@@ -15,13 +16,13 @@ export default function TeamDashboard({ user }) {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  useLiveRefresh(() => fetchTasks(), user.name);
+
+
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get(`${API}/tasks/user/${user.name}`);
+      const response = await axios.get(`${API}/tasks/user/${encodeURIComponent(user.name)}`);
       setTasks(response.data);
     } catch (error) {
       console.error('Error fetching tasks:', error);
@@ -33,8 +34,8 @@ export default function TeamDashboard({ user }) {
 
   const handleToggleTask = async (taskId, completed) => {
     try {
-      await axios.patch(`${API}/tasks/${taskId}`, { completed: !completed });
-      setTasks(tasks.map(t => t.id === taskId ? { ...t, completed: !completed } : t));
+      const response = await axios.patch(`${API}/tasks/${taskId}`, { completed: !completed });
+      setTasks(current => current.map(t => t.id === taskId ? response.data : t));
       toast.success(completed ? 'Task marked as incomplete' : 'Task completed!');
     } catch (error) {
       console.error('Error updating task:', error);
@@ -141,3 +142,4 @@ export default function TeamDashboard({ user }) {
     </div>
   );
 }
+

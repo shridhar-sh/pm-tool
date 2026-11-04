@@ -79,15 +79,23 @@ class Project(BaseModel):
     assignedLP: Optional[str] = None
     pod: Optional[str] = "POD 1"
     workflowStages: List[Dict] = []
+    extraDayMarkers: Dict[str, bool] = Field(default_factory=dict)
+    extraDayVisual: Dict[str, bool] = Field(default_factory=dict)
+    workingDays: Dict[str, bool] = Field(default_factory=dict)
+    workingDaysVisual: Dict[str, bool] = Field(default_factory=dict)
+    stageOverlaps: Dict[str, int] = Field(default_factory=dict)
     createdBy: Optional[str] = None
     createdAt: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
-class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    statusCategory: Optional[str] = None
-    extraDays: Optional[int] = None
-    workflowStages: Optional[List[Dict]] = None
+if __package__:
+    from .project_models import ProjectUpdate
+    from .workflow import progress_signature, workflow_status
+    from .work_items import TaskCreate, TaskUpdate, ApprovalCreate, ApprovalUpdate
+else:
+    from project_models import ProjectUpdate
+    from workflow import progress_signature, workflow_status
+    from work_items import TaskCreate, TaskUpdate, ApprovalCreate, ApprovalUpdate
 
 
 class TeamMember(BaseModel):
@@ -125,6 +133,7 @@ class StageUpdate(BaseModel):
     extraDays: Optional[int] = None
     completed: Optional[bool] = None
     status: Optional[str] = None
+    started: Optional[bool] = None
 
 
 @api_router.get("/")
@@ -175,6 +184,8 @@ async def create_project(input: ProjectCreate):
         input.workflowStages = create_default_workflow_stages()
     
     project_obj = Project(**input.model_dump())
+    if any(s.get("completed") or s.get("started") for s in project_obj.workflowStages):
+        project_obj.statusCategory = workflow_status(project_obj.workflowStages)
     doc = project_obj.model_dump()
     await db.projects.insert_one(doc)
     return project_obj
@@ -200,6 +211,11 @@ async def update_project(project_id: str, update: ProjectUpdate):
     if not update_data:
         raise HTTPException(status_code=400, detail="No update data provided")
     
+    existing = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Project not found")
+    if "workflowStages" in update_data and progress_signature(update_data["workflowStages"]) != progress_signature(existing.get("workflowStages", [])):
+        update_data["statusCategory"] = workflow_status(update_data["workflowStages"])
     result = await db.projects.update_one(
         {"id": project_id},
         {"$set": update_data}
@@ -219,16 +235,24 @@ async def update_stage(project_id: str, stage_index: int, update: StageUpdate):
         raise HTTPException(status_code=404, detail="Project not found")
     
     stages = project.get("workflowStages", [])
-    if stage_index >= len(stages):
+    old_progress = progress_signature(stages)
+    if stage_index < 0 or stage_index >= len(stages):
         raise HTTPException(status_code=404, detail="Stage not found")
     
     update_data = {k: v for k, v in update.model_dump().items() if v is not None}
     for key, value in update_data.items():
         stages[stage_index][key] = value
     
+    if "completed" in update_data:
+        stages[stage_index]["status"] = "completed" if update_data["completed"] else "not_started"
+    elif "status" in update_data:
+        stages[stage_index]["completed"] = update_data["status"] == "completed"
+    fields = {"workflowStages": stages}
+    if progress_signature(stages) != old_progress:
+        fields["statusCategory"] = workflow_status(stages)
     await db.projects.update_one(
         {"id": project_id},
-        {"$set": {"workflowStages": stages}}
+        {"$set": fields}
     )
     
     return {"message": "Stage updated", "stage": stages[stage_index]}
@@ -239,6 +263,8 @@ async def delete_project(project_id: str):
     result = await db.projects.delete_one({"id": project_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Project not found")
+    await db.tasks.delete_many({"projectId": project_id})
+    await db.approvals.delete_many({"projectId": project_id})
     return {"message": "Project deleted"}
 
 
@@ -259,6 +285,7 @@ async def create_bulk_team_members(input: BulkTeamMembersCreate):
     for member_data in input.members:
         member = TeamMember(
             employeeId=member_data["employeeId"],
+            shortName=member_data.get("shortName"),
             name=member_data["name"],
             role=member_data["role"],
             department=member_data["department"],
@@ -368,6 +395,83 @@ async def seed_holidays():
     return {"message": f"Seeded {len(holidays_to_insert)} holidays for 2026"}
 
 
+# Tasks and approvals share the project id; project names are read from the project
+# so a rename never requires a second manual edit.
+async def require_project(project_id):
+    project = await db.projects.find_one({"id": project_id}, {"_id": 0})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+
+async def task_with_project(task):
+    project = await require_project(task["projectId"])
+    return {**task, "projectName": project["name"]}
+
+
+@api_router.post("/tasks")
+async def create_task(input: TaskCreate):
+    await require_project(input.projectId)
+    task = {**input.model_dump(mode="json"), "id": str(uuid.uuid4()),
+            "createdAt": datetime.now(timezone.utc).isoformat()}
+    await db.tasks.insert_one(dict(task))
+    return await task_with_project(task)
+
+
+@api_router.get("/tasks/project/{project_id}")
+async def project_tasks(project_id: str):
+    project = await require_project(project_id)
+    tasks = await db.tasks.find({"projectId": project_id}, {"_id": 0}).to_list(None)
+    return [{**task, "projectName": project["name"]} for task in tasks]
+
+
+@api_router.get("/tasks/user/{user_name}")
+async def user_tasks(user_name: str):
+    tasks = await db.tasks.find({"assignedTo": user_name}, {"_id": 0}).to_list(None)
+    projects = await db.projects.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(None)
+    names = {p["id"]: p["name"] for p in projects}
+    return [{**t, "projectName": names[t["projectId"]]} for t in tasks if t["projectId"] in names]
+
+
+@api_router.patch("/tasks/{task_id}")
+async def update_task(task_id: str, input: TaskUpdate):
+    data = input.model_dump(mode="json", exclude_none=True)
+    if not data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    if "completed" in data:
+        data["completedAt"] = datetime.now(timezone.utc).isoformat() if data["completed"] else None
+    result = await db.tasks.update_one({"id": task_id}, {"$set": data})
+    if not result.matched_count:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return await task_with_project(await db.tasks.find_one({"id": task_id}, {"_id": 0}))
+
+
+@api_router.post("/approvals")
+async def create_approval(input: ApprovalCreate):
+    await require_project(input.projectId)
+    approval = {**input.model_dump(), "id": str(uuid.uuid4()), "status": "pending",
+                "requestedAt": datetime.now(timezone.utc).isoformat()}
+    await db.approvals.insert_one(dict(approval))
+    return approval
+
+
+@api_router.get("/approvals/project/{project_id}")
+async def project_approvals(project_id: str):
+    await require_project(project_id)
+    return await db.approvals.find({"projectId": project_id}, {"_id": 0}).to_list(None)
+
+
+@api_router.patch("/approvals/{approval_id}")
+async def review_approval(approval_id: str, input: ApprovalUpdate):
+    data = {**input.model_dump(), "reviewedAt": datetime.now(timezone.utc).isoformat()}
+    result = await db.approvals.update_one({"id": approval_id, "status": "pending"}, {"$set": data})
+    if not result.matched_count:
+        existing = await db.approvals.find_one({"id": approval_id})
+        raise HTTPException(status_code=409 if existing else 404,
+                            detail="Approval already reviewed" if existing else "Approval not found")
+    return await db.approvals.find_one({"id": approval_id}, {"_id": 0})
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -387,3 +491,4 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
