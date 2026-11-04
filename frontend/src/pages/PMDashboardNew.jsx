@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import useLiveRefresh from '@/hooks/useLiveRefresh';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Plus, Search, List, LayoutGrid, Calendar as CalendarIcon, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import ProjectTimeline from '@/components/ProjectTimeline';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function PMDashboardNew({ user }) {
@@ -39,21 +40,15 @@ export default function PMDashboardNew({ user }) {
     pod: 'POD 1'
   });
 
-  useEffect(() => {
-    fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useLiveRefresh(() => fetchProjects(), id);
+
+
 
   const fetchProjects = async () => {
     try {
       const response = await axios.get(`${API}/projects`);
       setProjects(response.data);
-      if (id) {
-        const project = response.data.find(p => p.id === id);
-        if (project) setSelectedProject(project);
-      } else if (response.data.length > 0 && !selectedProject) {
-        setSelectedProject(response.data[0]);
-      }
+      setSelectedProject(current => response.data.find(p => p.id === (id || current?.id)) || response.data[0] || null);
     } catch (error) {
       console.error('Error fetching projects:', error);
       toast.error('Failed to load projects');

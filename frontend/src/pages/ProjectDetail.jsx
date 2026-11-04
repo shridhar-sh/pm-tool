@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import useLiveRefresh from '@/hooks/useLiveRefresh';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Users, Clock, CheckCircle, Circle, AlertCircle, Plus, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function ProjectDetail({ user }) {
@@ -41,9 +42,9 @@ export default function ProjectDetail({ user }) {
     approver: ''
   });
 
-  useEffect(() => {
-    fetchProjectData();
-  }, [id]);
+  useLiveRefresh(() => fetchProjectData(), id);
+
+
 
   const fetchProjectData = async () => {
     try {
@@ -123,8 +124,8 @@ export default function ProjectDetail({ user }) {
 
   const handleUpdateStatus = async (newStatus) => {
     try {
-      await axios.patch(`${API}/projects/${id}`, { status: newStatus });
-      setProject({ ...project, status: newStatus });
+      const response = await axios.patch(`${API}/projects/${id}`, { statusCategory: newStatus });
+      setProject(response.data);
       toast.success('Project status updated!');
     } catch (error) {
       console.error('Error updating status:', error);
@@ -134,14 +135,14 @@ export default function ProjectDetail({ user }) {
 
   const handleApprovalAction = async (approvalId, action) => {
     try {
-      await axios.patch(`${API}/approvals/${approvalId}`, {
+      const response = await axios.patch(`${API}/approvals/${approvalId}`, {
         status: action,
         reviewedBy: user.name,
         reviewedAt: new Date().toISOString()
       });
       setApprovals(
         approvals.map(a =>
-          a.id === approvalId ? { ...a, status: action, reviewedBy: user.name } : a
+          a.id === approvalId ? response.data : a
         )
       );
       toast.success(`Approval ${action}!`);
@@ -152,16 +153,17 @@ export default function ProjectDetail({ user }) {
   };
 
   const workflowStages = [
-    { name: 'Onboarding', value: 'onboarding', color: 'text-violet-600' },
+    { name: 'Yet to Start', value: 'yet_to_start', color: 'text-slate-600' },
     { name: 'Strategy', value: 'strategy', color: 'text-blue-600' },
+    { name: 'Pre-Production', value: 'pre_production', color: 'text-violet-600' },
     { name: 'Production', value: 'production', color: 'text-amber-600' },
     { name: 'Post-Production', value: 'post_production', color: 'text-purple-600' },
-    { name: 'Client Review', value: 'client_review', color: 'text-orange-600' },
-    { name: 'Completed', value: 'completed', color: 'text-green-600' }
+    { name: 'Corrections', value: 'correction_ongoing', color: 'text-orange-600' },
+    { name: 'Closed', value: 'closed', color: 'text-green-600' }
   ];
 
   const getCurrentStageIndex = () => {
-    return workflowStages.findIndex(s => s.value === project?.status);
+    return workflowStages.findIndex(s => s.value === project?.statusCategory);
   };
 
   const getStatusColor = (status) => {
@@ -213,7 +215,7 @@ export default function ProjectDetail({ user }) {
             <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
               <div className="flex items-center gap-1">
                 <Calendar className="w-4 h-4" />
-                <span className="mono">{new Date(project.deadline).toLocaleDateString()}</span>
+                <span className="mono">{project.projectEndDate ? new Date(`${project.projectEndDate}T00:00:00`).toLocaleDateString() : 'Not scheduled'}</span>
               </div>
               {project.assignedAM && (
                 <div className="flex items-center gap-1">
@@ -284,10 +286,10 @@ export default function ProjectDetail({ user }) {
               <Button
                 key={stage.value}
                 size="sm"
-                variant={project.status === stage.value ? 'default' : 'outline'}
+                variant={project.statusCategory === stage.value ? 'default' : 'outline'}
                 onClick={() => handleUpdateStatus(stage.value)}
                 data-testid={`status-button-${stage.value}`}
-                className={project.status === stage.value ? 'bg-slate-900 hover:bg-slate-800' : ''}
+                className={project.statusCategory === stage.value ? 'bg-slate-900 hover:bg-slate-800' : ''}
               >
                 Move to {stage.name}
               </Button>
@@ -569,3 +571,4 @@ export default function ProjectDetail({ user }) {
     </div>
   );
 }
+

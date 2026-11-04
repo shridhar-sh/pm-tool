@@ -1,3 +1,4 @@
+import useLiveRefresh from '@/hooks/useLiveRefresh';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, Clock, CheckCircle, AlertCircle, Users, Briefcase, Plus } from 'lucide-react';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import axios from 'axios';
 import { toast } from 'sonner';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function Dashboard({ user }) {
@@ -31,8 +32,9 @@ export default function Dashboard({ user }) {
     assignedAM: ''
   });
 
+  useLiveRefresh(() => fetchProjects());
+
   useEffect(() => {
-    fetchProjects();
     fetchTeam();
   }, []);
 
@@ -411,3 +413,4 @@ export default function Dashboard({ user }) {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+import useLiveRefresh from '@/hooks/useLiveRefresh';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit2 } from 'lucide-react';
@@ -14,7 +15,7 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import { format, parseISO } from 'date-fns';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 // Format date as dd-mm-yy
@@ -47,8 +48,9 @@ export default function MyDeck({ user }) {
     assignedAM: ''
   });
 
+  useLiveRefresh(() => fetchProjects());
+
   useEffect(() => {
-    fetchProjects();
     fetchTeam();
   }, []);
 
@@ -86,6 +88,7 @@ export default function MyDeck({ user }) {
         sow: editingProject.sow,
         csDoneBy: editingProject.csDoneBy,
         pod: editingProject.pod,
+        assignedAM: editingProject.assignedAM,
         assignedLP: editingProject.assignedLP,
         projectStartDate: editingProject.projectStartDate,
         projectEndDate: editingProject.projectEndDate
@@ -151,47 +154,12 @@ export default function MyDeck({ user }) {
   const handleStageToggle = async (projectId, stageIndex, completed) => {
     try {
       const project = projects.find(p => p.id === projectId);
-      const updatedStages = [...project.workflowStages];
-      updatedStages[stageIndex].completed = completed;
-
-      // Auto-calculate status based on completed stages
-      // Status logic:
-      // - yet_to_start: Nothing completed or only before Onboarding
-      // - pre_production: Onboarding completed
-      // - production: Pre Production or PPM completed
-      // - post_production: Shoot completed
-      // - closed: Final Approval completed
-      
-      let newStatus = 'yet_to_start';
-      
-      // Check which stages are completed
-      const isCompleted = (stageName) => {
-        const stage = updatedStages.find(s => s.name === stageName);
-        return stage?.completed || false;
-      };
-
-      if (isCompleted('Final Approval')) {
-        newStatus = 'closed';
-      } else if (isCompleted('Shoot')) {
-        newStatus = 'post_production';
-      } else if (isCompleted('Pre Production') || isCompleted('PPM')) {
-        newStatus = 'production';
-      } else if (isCompleted('Onboarding')) {
-        newStatus = 'pre_production';
-      } else {
-        newStatus = 'yet_to_start';
-      }
-
-      await axios.patch(`${API}/projects/${projectId}`, {
-        workflowStages: updatedStages,
-        statusCategory: newStatus
-      });
-
-      setProjects(projects.map(p =>
-        p.id === projectId ? { ...p, workflowStages: updatedStages, statusCategory: newStatus } : p
-      ));
+      await axios.patch(`${API}/projects/${projectId}/stages/${stageIndex}`, { completed });
+      const response = await axios.get(`${API}/projects/${projectId}`);
+      setProjects(current => current.map(p => p.id === projectId ? response.data : p));
     } catch (error) {
       console.error('Error:', error);
+      toast.error('Failed to update stage');
     }
   };
 
@@ -621,3 +589,4 @@ export default function MyDeck({ user }) {
     </div>
   );
 }
+

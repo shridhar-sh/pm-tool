@@ -1,0 +1,28 @@
+# Local development only: demo login does not provide API authorization.
+services:
+  mongo:
+    image: mongo:7.0
+    volumes:
+      - pm-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  backend:
+    build: ./backend
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: agency_pm_local
+      CORS_ORIGINS: http://localhost:3000
+    depends_on:
+      mongo:
+        condition: service_healthy
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:3000:80"
+    depends_on:
+      - backend
+volumes:
+  pm-data:

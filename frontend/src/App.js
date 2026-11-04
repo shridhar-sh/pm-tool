@@ -16,7 +16,7 @@ import TeamDirectory from '@/pages/TeamDirectory';
 import ProjectDetail from '@/pages/ProjectDetail';
 import HolidayManagement from '@/pages/HolidayManagement';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 // Role-based access control helper
@@ -210,3 +210,4 @@ function App() {
 }
 
 export default App;
+

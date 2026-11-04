@@ -14,7 +14,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
 export default function ProjectTimeline({ project, onUpdate }) {
@@ -248,7 +248,7 @@ export default function ProjectTimeline({ project, onUpdate }) {
       console.error('Error auto-calculating dates:', err);
       return workflowStages;
     }
-  }, [project?.projectStartDate, findStageForExtraDay, getNextWorkingDay, addWorkingDays, isNonWorkingDay, workingDays, holidays, isWeekend]);
+  }, [project?.projectStartDate, findStageForExtraDay, workingDays, holidays, isWeekend]);
 
   // Initialize stages when project changes
   useEffect(() => {
